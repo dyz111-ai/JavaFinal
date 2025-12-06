@@ -1,4 +1,4 @@
-package com.example.demo0.reader.web;
+package com.example.demo0.reader.controller;
 
 import jakarta.servlet.ServletException;
 import jakarta.servlet.annotation.WebServlet;
@@ -9,7 +9,7 @@ import java.io.IOException;
 import java.nio.charset.StandardCharsets;
 
 @WebServlet(urlPatterns = {"/reader/*"})
-public class ReaderServlet extends HttpServlet {
+public class ReaderController extends HttpServlet {
 
     @Override
     protected void doGet(HttpServletRequest req, HttpServletResponse resp) throws ServletException, IOException {
@@ -41,5 +41,6 @@ public class ReaderServlet extends HttpServlet {
         return (p == null || p.isBlank()) ? "/profile" : p;
     }
 }
+
 
 

@@ -78,5 +78,32 @@ public class BookRepository {
         }
     }
 
+    public BookInfo findByIsbn(String isbn) {
+        if (isbn == null || isbn.trim().isEmpty()) return null;
+        String sql = "SELECT isbn, title, author, stock FROM public.bookinfo WHERE isbn = ? LIMIT 1";
+        try (Connection conn = dataSource.getConnection();
+             PreparedStatement ps = conn.prepareStatement(sql)) {
+            ps.setString(1, isbn.trim());
+            try (ResultSet rs = ps.executeQuery()) {
+                if (rs.next()) {
+                    BookInfo b = new BookInfo();
+                    b.setISBN(nullSafe(rs.getString("isbn")));
+                    b.setTitle(nullSafe(rs.getString("title")));
+                    b.setAuthor(nullSafe(rs.getString("author")));
+                    int stock = rs.getInt("stock");
+                    if (rs.wasNull()) {
+                        b.setStock(null);
+                    } else {
+                        b.setStock(stock);
+                    }
+                    return b;
+                }
+            }
+            return null;
+        } catch (SQLException e) {
+            throw new RuntimeException("按 ISBN 查询失败: " + e.getMessage(), e);
+        }
+    }
+
     private String nullSafe(String s) { return s == null ? "" : s; }
 }

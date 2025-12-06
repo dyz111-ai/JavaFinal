@@ -20,6 +20,8 @@
         .cover{width:180px; height:auto; display:block}
         .title{font-size:16px; font-weight:600; margin:10px 0 6px; text-align:center}
         .meta{font-size:13px; color:#6b7280; margin:3px 0}
+        .actions{margin-top:10px; display:flex; gap:10px}
+        .link{color:#2563eb; text-decoration:none}
         .empty{text-align:center; padding:40px 0; color:#6b7280}
     </style>
 </head>
@@ -37,10 +39,11 @@
     %>
 
     <form class="search-bar" method="get" action="<%=request.getContextPath()%>/book/search">
-        <input type="text" name="keyword" placeholder="输入书名 / 作者 / ISBN / 分类" value="<%=keyword%>"/>
+        <input type="text" name="keyword" placeholder="输入书名 / 作者 / ISBN" value="<%=keyword%>"/>
         <button type="submit">搜索</button>
     </form>
 
+    <!-- 分类占位（后续接真实分类后开启） -->
     <div>
         <div style="display:flex; align-items:center; gap:10px; flex-wrap:wrap;">
             <span style="font-size:12px; color:#6b7280">按分类筛选：</span>
@@ -66,14 +69,20 @@
     <div class="grid">
         <%
             for (BookInfo b : books) {
-                String cover = request.getContextPath()+"/covers/"+b.getISBN()+".jpg";
+                String rawIsbn = b.getISBN()==null?"":b.getISBN().trim();
+                String isbnFile = rawIsbn.replaceAll("[^0-9Xx]", "");
+                String cover = request.getContextPath()+"/covers/"+isbnFile+".jpg";
         %>
         <div class="card">
             <img class="cover" src="<%=cover%>" alt="封面" onerror="this.onerror=null;this.src='data:image/svg+xml;charset=UTF-8,<svg xmlns='http://www.w3.org/2000/svg' width='180' height='260'><rect width='100%' height='100%' fill='%23e5e7eb'/><text x='50%' y='50%' dominant-baseline='middle' text-anchor='middle' fill='%239ca3af' font-family='Arial' font-size='14'>无封面</text></svg>'"/>
             <div class="title"><%= b.getTitle() %></div>
             <div class="meta">作者：<%= b.getAuthor() %></div>
             <div class="meta">ISBN：<%= b.getISBN() %></div>
-            <div class="meta">分类：<%= b.getCategoriesString() %></div>
+            <div class="meta">库存：<%= b.getStock()==null?"-":b.getStock() %></div>
+            <div class="actions">
+                <a class="link" href="<%=request.getContextPath()%>/book/detail?isbn=<%= rawIsbn %>">查看详情</a>
+                <a class="link" href="<%=request.getContextPath()%>/comment/list?isbn=<%= rawIsbn %>">查看评论</a>
+            </div>
         </div>
         <%
             }

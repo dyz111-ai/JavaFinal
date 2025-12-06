@@ -1,4 +1,4 @@
-package com.example.demo0.auth.web;
+package com.example.demo0.auth.controller;
 
 import jakarta.servlet.ServletException;
 import jakarta.servlet.annotation.WebServlet;
@@ -41,5 +41,6 @@ public class AuthServlet extends HttpServlet {
         return (p == null || p.isBlank()) ? "/login" : p;
     }
 }
+
 
 

@@ -1,4 +1,4 @@
-package com.example.demo0.home.web;
+package com.example.demo0.home.controller;
 
 import com.example.demo0.book.model.BookInfo;
 import com.example.demo0.book.repository.BookRepository;
@@ -15,7 +15,7 @@ import java.util.List;
 import java.util.Map;
 
 @WebServlet(urlPatterns = {"/home"})
-public class HomeServlet extends HttpServlet {
+public class HomeController extends HttpServlet {
 
     private final BookRepository bookRepository = new BookRepository();
 

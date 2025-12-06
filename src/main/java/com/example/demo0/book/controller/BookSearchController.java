@@ -1,4 +1,4 @@
-package com.example.demo0.book.web;
+package com.example.demo0.book.controller;
 
 import com.example.demo0.book.model.BookInfo;
 import com.example.demo0.book.service.BookSearchService;
@@ -13,7 +13,7 @@ import java.nio.charset.StandardCharsets;
 import java.util.List;
 
 @WebServlet(urlPatterns = {"/book/search"})
-public class BookSearchServlet extends HttpServlet {
+public class BookSearchController extends HttpServlet {
 
     private final BookSearchService service = new BookSearchService();
 
@@ -41,7 +41,7 @@ public class BookSearchServlet extends HttpServlet {
         req.setAttribute("categories", categories);
         req.setAttribute("books", list);
 
-        req.getRequestDispatcher("/WEB-INF/views/book-search.jsp").forward(req, resp);
+        req.getRequestDispatcher("/WEB-INF/views/book/book-search.jsp").forward(req, resp);
     }
 
     private String param(HttpServletRequest req, String name) {
