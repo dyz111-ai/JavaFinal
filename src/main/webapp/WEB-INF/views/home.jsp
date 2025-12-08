@@ -71,17 +71,71 @@
     if (quickEntries == null) quickEntries = Collections.emptyList();
 %>
 
-<!-- 顶部导航 -->
-<div class="container">
-    <header>
-        <div class="brand">图书馆管理系统</div>
-        <nav>
-            <a class="link" href="<%=request.getContextPath()%>/home">首页</a>
-            &nbsp;&nbsp;
-            <a class="link" href="<%=request.getContextPath()%>/book/search">图书搜索</a>
-        </nav>
-    </header>
-</div>
+<%-- 顶部导航栏 --%>
+<nav class="navbar">
+    <div class="container navbar-inner">
+        <a class="brand" href="<%=request.getContextPath()%>/home">
+            <%-- 这里可以用 SVG 图标 --%>
+            <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="color: #2563eb;">
+                <path d="M4 19.5A2.5 2.5 0 0 1 6.5 17H20"></path>
+                <path d="M6.5 2H20v20H6.5A2.5 2.5 0 0 1 4 19.5v-15A2.5 2.5 0 0 1 6.5 2z"></path>
+            </svg>
+            <span style="font-weight: 700; font-size: 1.2rem; color: #1e293b;">阅享图书馆</span>
+        </a>
+
+        <div class="nav-links" style="display: flex; align-items: center; gap: 24px;">
+            <%-- 基础导航 --%>
+            <a class="nav-link" href="<%=request.getContextPath()%>/home">首页</a>
+            <a class="nav-link" href="<%=request.getContextPath()%>/book/search">图书搜索</a>
+
+            <%-- 分割线 --%>
+            <div style="width: 1px; height: 24px; background-color: #e5e7eb;"></div>
+
+            <%-- 登录状态判断 --%>
+            <% if(session.getAttribute("currentUser") == null) { %>
+            <%-- 未登录状态：显示主要的操作按钮 --%>
+            <div style="display: flex; gap: 12px;">
+                <a href="<%=request.getContextPath()%>/auth/login"
+                   style="padding: 8px 20px; color: #4b5563; font-weight: 500; transition: color 0.2s;">
+                    登录
+                </a>
+                <a href="<%=request.getContextPath()%>/auth/register" class="btn btn-primary"
+                   style="padding: 8px 20px; border-radius: 99px; font-size: 0.95rem;">
+                    注册账号
+                </a>
+            </div>
+            <% } else { %>
+            <%-- 已登录状态：显示用户信息和下拉菜单入口 --%>
+            <div style="display: flex; align-items: center; gap: 16px;">
+                <%-- 欢迎语 --%>
+                <span style="font-size: 0.9rem; color: #64748b;">
+                        你好, <strong style="color: #334155;">${sessionScope.currentUser.nickname}</strong>
+                    </span>
+
+                <%-- 个人中心按钮 (带图标) --%>
+                <a href="<%=request.getContextPath()%>/reader/profile" class="nav-link" title="个人中心"
+                   style="display: flex; align-items: center; gap: 6px; background: #f1f5f9; padding: 6px 12px; border-radius: 8px;">
+                    <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                        <path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2"></path>
+                        <circle cx="12" cy="7" r="4"></circle>
+                    </svg>
+                    <span style="font-size: 0.9rem;">我的</span>
+                </a>
+
+                <%-- 退出按钮 --%>
+                <a href="<%=request.getContextPath()%>/auth/logout"
+                   style="color: #94a3b8; transition: color 0.2s;" title="退出登录">
+                    <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                        <path d="M9 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h4"></path>
+                        <polyline points="16 17 21 12 16 7"></polyline>
+                        <line x1="21" y1="12" x2="9" y2="12"></line>
+                    </svg>
+                </a>
+            </div>
+            <% } %>
+        </div>
+    </div>
+</nav>
 
 <!-- Banner 与搜索条 -->
 <section class="banner">
