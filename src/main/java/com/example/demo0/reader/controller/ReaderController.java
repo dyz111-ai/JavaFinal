@@ -23,6 +23,9 @@ public class ReaderController extends HttpServlet {
 
         String path = path(req);
         switch (path) {
+            case "/profile":
+                forward(req, resp, "/WEB-INF/views/reader/profile.jsp");
+                break;
             case "/borrow-records":
                 // 加载借阅记录数据
                 loadBorrowRecords(req);
@@ -54,7 +57,7 @@ public class ReaderController extends HttpServlet {
 
     private String path(HttpServletRequest req) {
         String p = req.getPathInfo();
-        return (p == null || p.isBlank()) ? "/booklists" : p;
+        return (p == null || p.isBlank()) ? "/profile" : p;
     }
 }
 

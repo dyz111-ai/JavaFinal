@@ -36,15 +36,13 @@
             <version>${junit.version}</version>
             <scope>test</scope>
         </dependency>
-        
-        
-        <!-- PostgreSQL JDBC 驱动（用于本地连接 Railway PostgreSQL 测试） -->
+
         <dependency>
             <groupId>org.postgresql</groupId>
             <artifactId>postgresql</artifactId>
             <version>42.7.3</version>
         </dependency>
-        <!-- Jakarta 注解（@Resource 等），容器会提供，编译期需要 -->
+
         <dependency>
             <groupId>jakarta.annotation</groupId>
             <artifactId>jakarta.annotation-api</artifactId>
@@ -57,6 +55,12 @@
             <groupId>com.google.code.gson</groupId>
             <artifactId>gson</artifactId>
             <version>2.10.1</version>
+        </dependency>
+        
+        <dependency>
+            <groupId>org.mindrot</groupId>
+            <artifactId>jbcrypt</artifactId>
+            <version>0.4</version>
         </dependency>
     </dependencies>
 
