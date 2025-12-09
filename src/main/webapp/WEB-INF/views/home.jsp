@@ -1,6 +1,8 @@
 <%@ page contentType="text/html; charset=UTF-8" pageEncoding="UTF-8" %>
 <%@ page import="java.util.*" %>
 <%@ page import="com.example.demo0.book.model.BookInfo" %>
+<%@ page import="com.example.demo0.home.model.Announcement" %>
+<%@ page import="java.text.SimpleDateFormat" %>
 <!DOCTYPE html>
 <html lang="zh-CN">
 <head>
@@ -19,8 +21,11 @@
         .brand{ font-weight:700; font-size:20px }
         .link{ color:var(--brand) }
 
+        /* 为导航栏留出空间 */
+        body { padding-top: 5rem; }
+        
         /* Banner 区（轮播 + 搜索条） */
-        .banner{ position:relative; width:100%; height:68vh; min-height:420px; background:#eef5fb; overflow:hidden }
+        .banner{ position:relative; width:100%; height:68vh; min-height:420px; background:#eef5fb; overflow:hidden; margin-top: 0; }
         .banner-slide{ position:absolute; inset:0; background-size:cover; background-position:center; opacity:0; transition:opacity .8s ease }
         .banner-slide.active{ opacity:1 }
         .banner-center{ position:absolute; left:50%; top:58%; transform:translate(-50%,-50%); width:80%; max-width:700px; z-index:2 }
@@ -36,7 +41,7 @@
         .section h3{ margin:0 0 12px; font-size:18px }
         .grid{ display:grid; gap:18px }
         .grid-2{ grid-template-columns: repeat(2, minmax(0, 1fr)); }
-        .grid-3{ grid-template-columns: repeat(3, minmax(0, 1fr)); }
+        .grid-3{ grid-template-columns: repeat(auto-fit, minmax(160px, 1fr)); } /* 自动适应宽度 */
         .grid-4{ grid-template-columns: repeat(4, minmax(0, 1fr)); }
         @media (max-width: 900px){ .grid-4{ grid-template-columns: repeat(2, minmax(0, 1fr)); } .grid-3{ grid-template-columns: repeat(2, minmax(0, 1fr)); } }
         @media (max-width: 600px){ .grid-4,.grid-3,.grid-2{ grid-template-columns: repeat(1, minmax(0, 1fr)); } }
@@ -49,7 +54,8 @@
         /* 公告 */
         .announce-item{ padding:10px 0; border-top:1px dashed var(--border) }
         .announce-item:first-child{ border-top:none }
-        .announce-title{ font-weight:600 }
+        .announce-title{ font-weight:600; display:flex; justify-content:space-between; align-items:center; }
+        .announce-date{ font-size:13px; color:var(--sub); font-weight:normal; }
         .announce-content{ color:var(--sub); margin-top:4px; font-size:14px }
 
         /* 推荐图书 */
@@ -58,6 +64,8 @@
         .title{ font-size:16px; font-weight:600; margin:10px 0 6px; text-align:center }
         .meta{ font-size:13px; color:var(--sub); margin:3px 0 }
         .actions{ margin-top:8px }
+        .main-layout { display: flex; gap: 20px; align-items: flex-start; margin-top: 24px; }
+        .main-content { flex: 1; min-width: 0; }
     </style>
 </head>
 <body>
@@ -65,23 +73,13 @@
     // 服务端数据
     List<BookInfo> recommends = (List<BookInfo>) request.getAttribute("recommends");
     if (recommends == null) recommends = Collections.emptyList();
-    List<Map<String, String>> announcements = (List<Map<String, String>>) request.getAttribute("announcements");
+    List<Announcement> announcements = (List<Announcement>) request.getAttribute("announcements");
     if (announcements == null) announcements = Collections.emptyList();
     List<Map<String, String>> quickEntries = (List<Map<String, String>>) request.getAttribute("quickEntries");
     if (quickEntries == null) quickEntries = Collections.emptyList();
 %>
 
-<!-- 顶部导航 -->
-<div class="container">
-    <header>
-        <div class="brand">图书馆管理系统</div>
-        <nav>
-            <a class="link" href="<%=request.getContextPath()%>/home">首页</a>
-            &nbsp;&nbsp;
-            <a class="link" href="<%=request.getContextPath()%>/book/search">图书搜索</a>
-        </nav>
-    </header>
-</div>
+<%@ include file="/WEB-INF/common/navbar.jsp" %>
 
 <!-- Banner 与搜索条 -->
 <section class="banner">
@@ -107,7 +105,9 @@
     </div>
 </section>
 
-<div class="container">
+<div class="container main-layout">
+       
+        <main class="main-content">
     <!-- 快速入口 + 公告 -->
     <div class="grid grid-2 section">
         <!-- 快速入口卡片 -->
@@ -117,6 +117,7 @@
                 <div class="entry-card">
                     <div class="entry-left">
                         <img src="<%=request.getContextPath()%>/assets/icons/search.svg" alt="搜索">
+                        
                         <span>图书搜索</span>
                     </div>
                     <a class="entry-link" href="<%=request.getContextPath()%>/book/search">进入</a>
@@ -133,7 +134,14 @@
                         <img src="<%=request.getContextPath()%>/assets/icons/renew.svg" alt="借阅">
                         <span>我的借阅</span>
                     </div>
-                    <a class="entry-link" href="#">进入</a>
+                    <a class="entry-link" href="<%=request.getContextPath()%>/reader/borrow-records">进入</a>
+                </div>
+                <div class="entry-card">
+                    <div class="entry-left">
+                        <img src="<%=request.getContextPath()%>/assets/icons/book.svg" alt="分类">
+                        <span>图书分类</span>
+                    </div>
+                    <a class="entry-link" href="<%=request.getContextPath()%>/category/display">进入</a>
                 </div>
             </div>
         </section>
@@ -147,12 +155,17 @@
             <div class="announce-item">暂无公告</div>
             <%
                 } else {
-                    for (Map<String, String> a : announcements) {
-                        String t = a.getOrDefault("title", "");
-                        String c = a.getOrDefault("content", "");
+                    SimpleDateFormat sdf = new SimpleDateFormat("yyyy-MM-dd");
+                    for (Announcement a : announcements) {
+                        String t = a.getTitle() != null ? a.getTitle() : "";
+                        String c = a.getContent() != null ? a.getContent() : "";
+                        String d = a.getCreateTime() != null ? sdf.format(a.getCreateTime()) : "";
             %>
             <div class="announce-item">
-                <div class="announce-title"><%= t %></div>
+                <div class="announce-title">
+                    <span><%= t %></span>
+                    <span class="announce-date"><%= d %></span>
+                </div>
                 <div class="announce-content"><%= c %></div>
             </div>
             <%
@@ -185,6 +198,7 @@
             %>
         </div>
     </section>
+</main>
 </div>
 
 <script>

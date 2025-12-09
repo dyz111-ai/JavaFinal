@@ -7,7 +7,7 @@
     <meta charset="UTF-8" />
     <title>图书搜索</title>
     <style>
-        body{font-family:system-ui, -apple-system, Segoe UI, Roboto, Helvetica, Arial, "Microsoft YaHei", sans-serif; margin:0; padding:20px; background:#f7f7f7; color:#374151}
+        body{font-family:system-ui, -apple-system, Segoe UI, Roboto, Helvetica, Arial, "Microsoft YaHei", sans-serif; margin:0; padding:20px; padding-top:5rem; background:#f7f7f7; color:#374151}
         .container{max-width:1100px; margin:0 auto}
         .search-bar{display:flex; gap:8px; margin:10px 0 18px}
         input[type=text]{flex:1; padding:10px 12px; border:1px solid #e5e7eb; border-radius:8px}
@@ -16,7 +16,7 @@
         .chip{border:1px solid #e5e7eb; background:#fff; color:#374151; padding:6px 12px; border-radius:999px; text-decoration:none}
         .chip.active{background:#2563eb; border-color:#2563eb; color:#fff}
         .grid{display:grid; grid-template-columns:repeat(auto-fill,minmax(240px,1fr)); gap:18px}
-        .card{background:#fff; border:1px solid #e5e7eb; border-radius:12px; padding:16px; display:flex; flex-direction:column; align-items:center}
+        .card{background:#fff; border:1px solid #e5e7eb; border-radius:12px; padding:16px; display:flex; flex-direction:column; align-items:center;}
         .cover{width:180px; height:auto; display:block}
         .title{font-size:16px; font-weight:600; margin:10px 0 6px; text-align:center}
         .meta{font-size:13px; color:#6b7280; margin:3px 0}
@@ -26,6 +26,7 @@
     </style>
 </head>
 <body>
+<%@ include file="/WEB-INF/common/navbar.jsp" %>
 <div class="container">
     <h2>图书搜索</h2>
     <%
@@ -74,14 +75,15 @@
                 String cover = request.getContextPath()+"/covers/"+isbnFile+".jpg";
         %>
         <div class="card">
-            <img class="cover" src="<%=cover%>" alt="封面" onerror="this.onerror=null;this.src='data:image/svg+xml;charset=UTF-8,<svg xmlns='http://www.w3.org/2000/svg' width='180' height='260'><rect width='100%' height='100%' fill='%23e5e7eb'/><text x='50%' y='50%' dominant-baseline='middle' text-anchor='middle' fill='%239ca3af' font-family='Arial' font-size='14'>无封面</text></svg>'"/>
+            <img class="cover" src="<%=cover%>" alt="封面" onerror="this.onerror=null;this.src='data:image/svg+xml;charset=UTF-8,%3Csvg xmlns=\'http://www.w3.org/2000/svg\' width=\'180\' height=\'260\'%3E%3Crect width=\'100%25\' height=\'100%25\' fill=\'%23e5e7eb\'/%3E%3Ctext x=\'50%25\' y=\'50%25\' dominant-baseline=\'middle\' text-anchor=\'middle\' fill=\'%239ca3af\' font-family=\'Arial\' font-size=\'14\'%3E无封面%3C/text%3E%3C/svg%3E'"/>
             <div class="title"><%= b.getTitle() %></div>
             <div class="meta">作者：<%= b.getAuthor() %></div>
             <div class="meta">ISBN：<%= b.getISBN() %></div>
             <div class="meta">库存：<%= b.getStock()==null?"-":b.getStock() %></div>
             <div class="actions">
-                <a class="link" href="<%=request.getContextPath()%>/book/detail?isbn=<%= rawIsbn %>">查看详情</a>
                 <a class="link" href="<%=request.getContextPath()%>/comment/list?isbn=<%= rawIsbn %>">查看评论</a>
+                <a class="link" href="<%=request.getContextPath()%>/book/physical?isbn=<%= java.net.URLEncoder.encode(rawIsbn, java.nio.charset.StandardCharsets.UTF_8) %>">查看实体书</a>
+
             </div>
         </div>
         <%

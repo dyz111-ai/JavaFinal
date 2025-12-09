@@ -7,7 +7,7 @@
   <meta charset="UTF-8" />
   <title>评论列表</title>
   <style>
-    body{font-family:system-ui,-apple-system,Segoe UI,Roboto,Helvetica,Arial,"Microsoft YaHei",sans-serif;margin:0;padding:20px;background:#f7f7f7;color:#374151}
+    body{font-family:system-ui,-apple-system,Segoe UI,Roboto,Helvetica,Arial,"Microsoft YaHei",sans-serif;margin:0;padding:20px;padding-top:5rem;background:#f7f7f7;color:#374151}
     .container{max-width:900px;margin:0 auto}
     .card{background:#fff;border:1px solid #e5e7eb;border-radius:12px;padding:18px;margin-bottom:14px}
     .muted{color:#6b7280}
@@ -20,6 +20,7 @@
   </style>
 </head>
 <body>
+<%@ include file="/WEB-INF/common/navbar.jsp" %>
 <div class="container">
   <h2>评论列表</h2>
   <%
@@ -27,14 +28,14 @@
     if (isbn == null) isbn = request.getParameter("isbn");
     List<CommentRecord> comments = (List<CommentRecord>) request.getAttribute("comments");
     if (comments == null) comments = Collections.emptyList();
-    String ctx = request.getContextPath();
+    // ctx变量已在navbar.jsp中定义，这里直接使用
     String redirect = "/comment/list?isbn=" + (isbn==null?"":isbn);
   %>
   <div class="card">
     <div class="row">
       <div>ISBN：<strong><%= isbn == null? "" : isbn %></strong></div>
       <div>
-        <a href="<%=ctx%>/book/detail?isbn=<%= isbn == null? "" : isbn %>">返回图书详情</a>
+        <a href="<%=ctx%>/book/search">返回搜索</a>
       </div>
     </div>
   </div>

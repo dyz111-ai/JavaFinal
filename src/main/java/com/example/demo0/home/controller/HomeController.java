@@ -2,6 +2,8 @@ package com.example.demo0.home.controller;
 
 import com.example.demo0.book.model.BookInfo;
 import com.example.demo0.book.repository.BookRepository;
+import com.example.demo0.home.model.Announcement;
+import com.example.demo0.home.repository.AnnouncementRepository;
 
 import jakarta.servlet.ServletException;
 import jakarta.servlet.annotation.WebServlet;
@@ -18,17 +20,16 @@ import java.util.Map;
 public class HomeController extends HttpServlet {
 
     private final BookRepository bookRepository = new BookRepository();
+    private final AnnouncementRepository announcementRepository = new AnnouncementRepository();
 
     @Override
     protected void doGet(HttpServletRequest req, HttpServletResponse resp) throws ServletException, IOException {
-        // 推荐图书（从内存数据取前几本）
+        // 推荐图书
         List<BookInfo> all = bookRepository.search(null);
         List<BookInfo> recommends = all.subList(0, Math.min(4, all.size()));
 
-        // 公告（示例数据）
-        List<Map<String, String>> announcements = new ArrayList<>();
-        announcements.add(makeAnnouncement("系统维护通知", "本周五 22:00-23:00 进行例行维护，届时系统短暂不可用。"));
-        announcements.add(makeAnnouncement("新书上架", "新增计算机经典书籍《Clean Code》《Effective Java》。"));
+        // 从数据库获取最新的5条公告
+        List<Announcement> announcements = announcementRepository.getLatestAnnouncements(5);
 
         // 快速入口
         List<Map<String, String>> quickEntries = new ArrayList<>();
@@ -44,12 +45,7 @@ public class HomeController extends HttpServlet {
         req.getRequestDispatcher("/WEB-INF/views/home.jsp").forward(req, resp);
     }
 
-    private Map<String, String> makeAnnouncement(String title, String content) {
-        Map<String, String> m = new HashMap<>();
-        m.put("title", title);
-        m.put("content", content);
-        return m;
-    }
+
 
     private Map<String, String> makeEntry(String name, String href) {
         Map<String, String> m = new HashMap<>();
