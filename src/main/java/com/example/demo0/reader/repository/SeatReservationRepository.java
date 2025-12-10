@@ -1,6 +1,6 @@
 package com.example.demo0.reader.repository;
 
-import com.example.demo0.reader.model.SeatReservation;
+import com.example.demo0.reader.model.SeatReservation; // 补上了这个关键的导入
 import com.example.demo0.reader.service.SeatReservationService.SeatStatus;
 
 import javax.naming.InitialContext;
@@ -50,16 +50,16 @@ public class SeatReservationRepository {
                 startHour = 8;
                 endHour = 10;
         }
-        
+
         // 验证日期格式
         if (date == null || date.isBlank()) {
             throw new IllegalArgumentException("日期不能为空");
         }
-        
+
         // 构建开始和结束时间，确保格式正确：yyyy-MM-dd HH:mm:ss
         String startTimeStr = date + " " + String.format("%02d:00:00", startHour);
         String endTimeStr = date + " " + String.format("%02d:00:00", endHour);
-        
+
         // 验证时间格式
         try {
             Timestamp.valueOf(startTimeStr);
@@ -67,7 +67,7 @@ public class SeatReservationRepository {
         } catch (IllegalArgumentException e) {
             throw new IllegalArgumentException("日期格式错误: " + date + ", 期望格式: yyyy-MM-dd", e);
         }
-        
+
         // 查询指定时间段内被预约的座位
         // 时间段重叠判断：预约的开始时间 < 查询的结束时间 AND 预约的结束时间 > 查询的开始时间
         String sql = """
@@ -117,11 +117,12 @@ public class SeatReservationRepository {
 
     public void reserve(int buildingId, int floor, String seatNumber, int readerId, String nickname,
                         LocalDateTime start, LocalDateTime end) {
-        String selectSeat = "SELECT SeatID, ReservationStatus FROM public.Seat WHERE BuildingID=? AND Floor=? AND SeatNumber=? FOR UPDATE";
+        String selectSeat = "SELECT SeatID FROM public.Seat WHERE BuildingID=? AND Floor=? AND SeatNumber=? FOR UPDATE";
+
         String checkReaderActive = "SELECT COUNT(*) FROM public.Reserve_Seat WHERE ReaderID=? AND Status='未完成'";
         String checkSeatConflict = "SELECT COUNT(*) FROM public.Reserve_Seat WHERE SeatID=? AND Status='未完成' AND StartTime < ? AND EndTime > ?";
         String insertReserve = "INSERT INTO public.Reserve_Seat (ReaderID, SeatID, ReservationTime, StartTime, EndTime, Status) VALUES (?, ?, CURRENT_TIMESTAMP, ?, ?, '未完成')";
-        String updateSeat = "UPDATE public.Seat SET ReservationStatus='已预约' WHERE SeatID=?";
+
         try (Connection conn = dataSource.getConnection()) {
             conn.setAutoCommit(false);
             try {
@@ -135,7 +136,7 @@ public class SeatReservationRepository {
                         }
                     }
                 }
-                
+
                 // 步骤2: 查询座位ID并加锁
                 int seatId;
                 try (PreparedStatement ps = conn.prepareStatement(selectSeat)) {
@@ -148,15 +149,11 @@ public class SeatReservationRepository {
                             throw new IllegalArgumentException("座位不存在");
                         }
                         seatId = rs.getInt("SeatID");
-                        String status = rs.getString("ReservationStatus");
-                        if (!"空闲".equals(status)) {
-                            conn.rollback();
-                            throw new IllegalStateException("该座位已被预约");
-                        }
+                        // 不再检查 Seat 表的全局状态
                     }
                 }
-                
-                // 步骤3: 检查座位在该时间段是否已被占用（时间冲突检查）
+
+                // 步骤3: 检查座位在该时间段是否已被占用（核心冲突检查）
                 try (PreparedStatement checkConflict = conn.prepareStatement(checkSeatConflict)) {
                     checkConflict.setInt(1, seatId);
                     checkConflict.setTimestamp(2, Timestamp.valueOf(end));
@@ -168,7 +165,7 @@ public class SeatReservationRepository {
                         }
                     }
                 }
-                
+
                 // 步骤4: 插入预约记录
                 try (PreparedStatement insert = conn.prepareStatement(insertReserve)) {
                     insert.setInt(1, readerId);
@@ -177,13 +174,7 @@ public class SeatReservationRepository {
                     insert.setTimestamp(4, Timestamp.valueOf(end));
                     insert.executeUpdate();
                 }
-                
-                // 步骤5: 更新座位状态
-                try (PreparedStatement upd = conn.prepareStatement(updateSeat)) {
-                    upd.setInt(1, seatId);
-                    upd.executeUpdate();
-                }
-                
+
                 conn.commit();
             } catch (IllegalArgumentException | IllegalStateException e) {
                 conn.rollback();
@@ -202,7 +193,7 @@ public class SeatReservationRepository {
     public boolean cancel(int buildingId, int floor, String seatNumber, int readerId) {
         String selectSeat = "SELECT SeatID FROM public.Seat WHERE BuildingID=? AND Floor=? AND SeatNumber=? FOR UPDATE";
         String cancelSql = "UPDATE public.Reserve_Seat SET Status='取消', EndTime=CURRENT_TIMESTAMP WHERE SeatID=? AND ReaderID=? AND Status='未完成'";
-        String freeSeat = "UPDATE public.Seat SET ReservationStatus='空闲' WHERE SeatID=?";
+
         try (Connection conn = dataSource.getConnection()) {
             conn.setAutoCommit(false);
             try (PreparedStatement ps = conn.prepareStatement(selectSeat)) {
@@ -222,10 +213,6 @@ public class SeatReservationRepository {
                         updated = cancel.executeUpdate();
                     }
                     if (updated > 0) {
-                        try (PreparedStatement free = conn.prepareStatement(freeSeat)) {
-                            free.setInt(1, seatId);
-                            free.executeUpdate();
-                        }
                         conn.commit();
                         return true;
                     } else {
@@ -330,4 +317,3 @@ public class SeatReservationRepository {
         return floors;
     }
 }
-
