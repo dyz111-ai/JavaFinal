@@ -40,7 +40,7 @@ public class CategoryService {
      */
     public List<CategoryNode> getCategoryTree() {
         List<Category> categories = repository.findAll();
-        
+
         // 构建分类字典
         Map<String, CategoryNode> nodeMap = new HashMap<>();
         for (Category c : categories) {
@@ -51,7 +51,7 @@ public class CategoryService {
             node.setChildren(new ArrayList<>());
             nodeMap.put(c.getCategoryId(), node);
         }
-        
+
         // 构建树结构
         List<CategoryNode> rootNodes = new ArrayList<>();
         for (CategoryNode node : nodeMap.values()) {
@@ -64,8 +64,29 @@ public class CategoryService {
                 nodeMap.get(parentId).getChildren().add(node);
             }
         }
-        
+
         return rootNodes;
+    }
+
+    /**
+     * 在分类树中查找指定ID的节点
+     */
+    public CategoryNode findNodeById(String categoryId) {
+        List<CategoryNode> roots = getCategoryTree();
+        return findNodeRecursive(roots, categoryId);
+    }
+
+    private CategoryNode findNodeRecursive(List<CategoryNode> nodes, String id) {
+        if (nodes == null || id == null) return null;
+        for (CategoryNode node : nodes) {
+            if (id.equals(node.getCategoryId())) {
+                return node;
+            }
+            // 递归查找子节点
+            CategoryNode found = findNodeRecursive(node.getChildren(), id);
+            if (found != null) return found;
+        }
+        return null;
     }
 
     /**
@@ -76,22 +97,22 @@ public class CategoryService {
         if (category.getCategoryId() == null || category.getCategoryId().isBlank()) {
             throw new IllegalArgumentException("分类ID不能为空");
         }
-        
+
         // 验证分类名称不能为空
         if (category.getCategoryName() == null || category.getCategoryName().isBlank()) {
             throw new IllegalArgumentException("分类名称不能为空");
         }
-        
+
         // 检查分类ID是否已存在
         if (repository.findById(category.getCategoryId()) != null) {
             throw new IllegalArgumentException("分类ID已存在");
         }
-        
+
         // 检查分类名称在同级中是否重复
         if (repository.isNameDuplicate(category.getCategoryName(), category.getParentCategoryId(), null)) {
             throw new IllegalArgumentException("同级分类中已存在相同名称");
         }
-        
+
         // 如果有父分类，验证父分类是否存在
         if (category.getParentCategoryId() != null && !category.getParentCategoryId().isBlank()) {
             Category parent = repository.findById(category.getParentCategoryId());
@@ -99,7 +120,7 @@ public class CategoryService {
                 throw new IllegalArgumentException("父分类不存在");
             }
         }
-        
+
         return repository.add(category);
     }
 
@@ -111,23 +132,23 @@ public class CategoryService {
         if (category.getCategoryId() == null || category.getCategoryId().isBlank()) {
             throw new IllegalArgumentException("分类ID不能为空");
         }
-        
+
         // 验证分类名称不能为空
         if (category.getCategoryName() == null || category.getCategoryName().isBlank()) {
             throw new IllegalArgumentException("分类名称不能为空");
         }
-        
+
         // 检查分类是否存在
         Category existing = repository.findById(category.getCategoryId());
         if (existing == null) {
             throw new IllegalArgumentException("分类不存在");
         }
-        
+
         // 检查分类名称在同级中是否重复（排除自己）
         if (repository.isNameDuplicate(category.getCategoryName(), category.getParentCategoryId(), category.getCategoryId())) {
             throw new IllegalArgumentException("同级分类中已存在相同名称");
         }
-        
+
         // 如果有父分类，验证父分类是否存在且不能是自己
         if (category.getParentCategoryId() != null && !category.getParentCategoryId().isBlank()) {
             if (category.getParentCategoryId().equals(category.getCategoryId())) {
@@ -138,7 +159,7 @@ public class CategoryService {
                 throw new IllegalArgumentException("父分类不存在");
             }
         }
-        
+
         return repository.update(category);
     }
 
@@ -151,18 +172,18 @@ public class CategoryService {
         if (category == null) {
             throw new IllegalArgumentException("分类不存在");
         }
-        
+
         // 检查分类下是否有关联图书
         if (repository.hasBooks(categoryId)) {
             throw new IllegalArgumentException("该分类下还有关联图书，无法删除");
         }
-        
+
         // 检查分类下是否有子分类
         int childCount = repository.getChildCount(categoryId);
         if (childCount > 0) {
             throw new IllegalArgumentException("该分类下还有子分类，无法删除");
         }
-        
+
         return repository.delete(categoryId);
     }
 
@@ -173,4 +194,3 @@ public class CategoryService {
         return repository.getCategoryPath(categoryId);
     }
 }
-
