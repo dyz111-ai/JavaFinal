@@ -1,4 +1,5 @@
 <%@ page contentType="text/html; charset=UTF-8" pageEncoding="UTF-8" %>
+<%@ page import="com.example.demo0.auth.model.Reader" %>
 <!DOCTYPE html>
 <html lang="zh-CN">
 <head>
@@ -29,6 +30,11 @@
   </style>
 </head>
 <body>
+<%
+    Reader currentUser = (Reader) session.getAttribute("currentUser");
+    Integer readerId = currentUser != null ? currentUser.getReaderId() : null;
+    boolean loggedIn = readerId != null;
+%>
 <%@ include file="/WEB-INF/common/navbar.jsp" %>
 <div class="container">
   <h1 class="title">📚 我的借阅</h1>
@@ -45,7 +51,7 @@
       <form id="borrowForm">
         <div class="form-group">
           <label for="borrowReaderId">读者ID:</label>
-          <input type="text" id="borrowReaderId" value="1" required readonly style="background:#eee">
+          <input type="text" id="borrowReaderId" value="<%= loggedIn ? readerId : "" %>" <%= loggedIn ? "readonly" : "disabled" %> placeholder="<%= loggedIn ? "" : "请先登录" %>" style="background:#eee">
         </div>
         <div class="form-group">
           <label for="borrowBarcode">图书条形码:</label>
@@ -61,7 +67,7 @@
       <form id="returnForm">
         <div class="form-group">
           <label for="returnReaderId">读者ID:</label>
-          <input type="text" id="returnReaderId" value="1" required readonly style="background:#eee">
+          <input type="text" id="returnReaderId" value="<%= loggedIn ? readerId : "" %>" <%= loggedIn ? "readonly" : "disabled" %> placeholder="<%= loggedIn ? "" : "请先登录" %>" style="background:#eee">
         </div>
         <div class="form-group">
           <label for="returnBarcode">图书条形码:</label>
@@ -77,11 +83,17 @@
 <div id="toast" class="toast"></div>
 
 <script>
+  const ctx = '<%=request.getContextPath()%>';
+  const isLoggedIn = <%= loggedIn ? "true" : "false" %>;
+
   document.getElementById('borrowForm').addEventListener('submit', function(e) {
     e.preventDefault();
-    const readerId = document.getElementById('borrowReaderId').value;
+    if (!isLoggedIn) {
+      showToast('请先登录后再借阅', 'error');
+      return;
+    }
     const barcode = document.getElementById('borrowBarcode').value;
-    const url = '<%=request.getContextPath()%>/api/borrowing/borrow?readerId=' + readerId + '&barcode=' + encodeURIComponent(barcode);
+    const url = ctx + '/api/borrowing/borrow?barcode=' + encodeURIComponent(barcode);
 
     fetch(url, { method: 'POST' })
       .then(handleResponse)
@@ -96,9 +108,12 @@
 
   document.getElementById('returnForm').addEventListener('submit', function(e) {
     e.preventDefault();
-    const readerId = document.getElementById('returnReaderId').value;
+    if (!isLoggedIn) {
+      showToast('请先登录后再归还', 'error');
+      return;
+    }
     const barcode = document.getElementById('returnBarcode').value;
-    const url = '<%=request.getContextPath()%>/api/borrowing/return?readerId=' + readerId + '&barcode=' + encodeURIComponent(barcode);
+    const url = ctx + '/api/borrowing/return?barcode=' + encodeURIComponent(barcode);
 
     fetch(url, { method: 'POST' })
       .then(handleResponse)

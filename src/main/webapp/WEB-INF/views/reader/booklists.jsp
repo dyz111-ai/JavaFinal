@@ -1,4 +1,5 @@
 <%@ page contentType="text/html; charset=UTF-8" pageEncoding="UTF-8" %>
+<%@ page import="com.example.demo0.auth.model.Reader" %>
 <%@ page import="java.util.*" %>
 <%@ page import="com.example.demo0.reader.model.BookList" %>
 <%@ page import="com.example.demo0.book.model.BookInfo" %>
@@ -35,6 +36,11 @@
     </style>
 </head>
 <body>
+<%
+    Reader currentUser = (Reader) session.getAttribute("currentUser");
+    Integer readerId = currentUser != null ? currentUser.getReaderId() : null;
+    boolean loggedIn = readerId != null;
+%>
 <%@ include file="/WEB-INF/common/navbar.jsp" %>
 
 <div class="container">
@@ -85,16 +91,20 @@
 </div>
 
 <script>
-    const API_BASE = '<%=request.getContextPath()%>/api/book/booklists';
-    const READER_ID = 1; // Hardcoded
+    const ctx = '<%=request.getContextPath()%>';
+    const API_BASE = ctx + '/api/book/booklists';
+    const API_MY = API_BASE + '/reader';
+    const isLoggedIn = <%= loggedIn ? "true" : "false" %>;
 
     document.addEventListener('DOMContentLoaded', loadBooklists);
 
     async function loadBooklists() {
+        if (!isLoggedIn) {
+            document.getElementById('booklistGrid').innerHTML = '<p style="color:red;">请先登录后查看书单</p>';
+            return;
+        }
         try {
-            const url = '<%=request.getContextPath()%>/api/book/booklists/reader/' + READER_ID;
-            console.log('Request URL:', url);
-            const response = await fetch(url);
+            const response = await fetch(API_MY);
             console.log('API Response status:', response.status);
             console.log('API Response URL:', response.url);
             if (!response.ok) {
@@ -211,10 +221,10 @@
 
         try {
             const response = await fetch('<%=request.getContextPath()%>/api/book/booklists', {
-                method: 'POST',
-                headers: {'Content-Type': 'application/x-www-form-urlencoded'},
-                body: formData
-            });
+            method: 'POST',
+            headers: {'Content-Type': 'application/x-www-form-urlencoded'},
+            body: formData
+        });
             
             console.log('Create response status:', response.status);
             
@@ -227,8 +237,8 @@
             
             const result = await response.json();
             console.log('Create success:', result);
-            document.getElementById('createBooklistForm').reset();
-            loadBooklists();
+        document.getElementById('createBooklistForm').reset();
+        loadBooklists();
         } catch (error) {
             console.error('Create booklist error:', error);
             alert('创建失败: ' + error.message);
@@ -260,18 +270,18 @@
         }
         
         try {
-            const response = await fetch('<%=request.getContextPath()%>/api/book/booklists/' + id);
+        const response = await fetch('<%=request.getContextPath()%>/api/book/booklists/' + id);
             if (!response.ok) {
                 const errorText = await response.text();
                 console.error('API Error:', errorText);
                 alert('加载书单详情失败: ' + errorText);
                 return;
             }
-            const data = await response.json();
-            console.log('Booklist details data:', data);
-            const modalTitle = document.getElementById('modalTitle');
-            const modalBody = document.getElementById('modalBody');
-            
+        const data = await response.json();
+        console.log('Booklist details data:', data);
+        const modalTitle = document.getElementById('modalTitle');
+        const modalBody = document.getElementById('modalBody');
+        
             // 数据结构：{ "BooklistInfo": {...}, "Books": [...] }
             const booklist = data.BooklistInfo || {};
             const booklistName = booklist.BooklistName || '未命名';
@@ -295,7 +305,7 @@
                 // 从当前收藏列表中获取备注
                 let currentNotes = '';
                 try {
-                    const collectedResponse = await fetch('<%=request.getContextPath()%>/api/book/booklists/reader/' + READER_ID);
+                    const collectedResponse = await fetch(API_MY);
                     if (collectedResponse.ok) {
                         const collectedData = await collectedResponse.json();
                         const collected = collectedData.Collected || [];
@@ -328,11 +338,11 @@
                         booksHtml += '<button class="btn btn-danger" style="padding:5px 10px;font-size:12px" onclick="removeBook(' + id + ', \'' + escapeHtml(bookIsbn) + '\')">移除</button>';
                     }
                     booksHtml += '</li>';
-                });
-            } else {
+            });
+        } else {
                 booksHtml += '<li style="padding:8px;color:#6b7280">暂无书籍</li>';
-            }
-            booksHtml += '</ul>';
+        }
+        booksHtml += '</ul>';
 
             let modalHtml = headerHtml + booksHtml;
             if (currentIsCreated) {
@@ -348,7 +358,7 @@
             }
 
             modalBody.innerHTML = modalHtml;
-            document.getElementById('detailModal').style.display = 'block';
+        document.getElementById('detailModal').style.display = 'block';
         } catch (error) {
             console.error('View details error:', error);
             alert('加载书单详情失败: ' + error.message);
@@ -533,8 +543,7 @@
     async function showRecommendModal() {
         try {
             // 先获取一个书单ID用于推荐
-            const url = '<%=request.getContextPath()%>/api/book/booklists/reader/' + READER_ID;
-            const response = await fetch(url);
+            const response = await fetch(API_MY);
             if (!response.ok) {
                 alert('无法获取推荐书单');
                 return;
@@ -543,13 +552,18 @@
             const created = data.Created || [];
             const collected = data.Collected || [];
             
-            let booklistId = 1; // 默认值
+            let booklistId = null;
             if (created.length > 0) {
                 const randomIndex = Math.floor(Math.random() * created.length);
                 booklistId = created[randomIndex].BooklistId;
             } else if (collected.length > 0) {
                 const randomIndex = Math.floor(Math.random() * collected.length);
                 booklistId = collected[randomIndex].BooklistId;
+            }
+            if (!booklistId) {
+                document.getElementById('recommendBody').innerHTML = '<p>暂无推荐书单</p>';
+                document.getElementById('recommendModal').style.display = 'block';
+                return;
             }
             
             // 获取推荐书单

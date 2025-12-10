@@ -1,5 +1,6 @@
 package com.example.demo0.reader.controller;
 
+import com.example.demo0.auth.model.Reader;
 import com.example.demo0.reader.model.BorrowRecordDetail;
 import com.example.demo0.reader.service.BorrowingService;
 import jakarta.servlet.ServletException;
@@ -16,13 +17,13 @@ import java.util.List;
 /**
  * 借阅功能REST API控制器
  * 
- * API端点：
- * - POST /api/borrowing/borrow?readerId=1&barcode=xxx - 借阅图书
- * - POST /api/borrowing/return?readerId=1&barcode=xxx - 归还图书
- * - GET /api/borrowing/reader - 查询我的借阅记录（readerId固定为1）
+ * API端点（基于当前登录读者）：
+ * - POST /api/borrowing/borrow?barcode=xxx - 借阅图书（当前登录读者）
+ * - POST /api/borrowing/return?barcode=xxx - 归还图书（当前登录读者）
+ * - GET /api/borrowing/reader - 查询“我”的借阅记录（当前登录读者）
  * - GET /api/borrowing/{id} - 查询单条借阅记录
- * - GET /api/borrowing/unreturned-count/1 - 获取未归还数量
- * - GET /api/borrowing/overdue-unreturned-count/1 - 获取逾期未归还数量
+ * - GET /api/borrowing/unreturned-count/{readerId} - 获取指定读者未归还数量
+ * - GET /api/borrowing/overdue-unreturned-count/{readerId} - 获取指定读者逾期未归还数量
  */
 @WebServlet(urlPatterns = {"/api/borrowing/*"})
 public class BorrowingApiController extends HttpServlet {
@@ -39,17 +40,15 @@ public class BorrowingApiController extends HttpServlet {
 
         try (PrintWriter out = resp.getWriter()) {
             if ("/reader".equals(pathInfo)) {
-                // 查询我的借阅记录（readerId固定为1）
+                // 查询当前登录读者的借阅记录
                 handleGetMyRecords(req, resp, out);
             } else if (pathInfo.startsWith("/unreturned-count/")) {
-                // 获取未归还数量
+                // 获取未归还数量（路径中指定 readerId）
                 String readerId = pathInfo.substring("/unreturned-count/".length());
-                if (readerId.isEmpty()) readerId = "1";
                 handleGetUnreturnedCount(req, resp, out, readerId);
             } else if (pathInfo.startsWith("/overdue-unreturned-count/")) {
-                // 获取逾期未归还数量
+                // 获取逾期未归还数量（路径中指定 readerId）
                 String readerId = pathInfo.substring("/overdue-unreturned-count/".length());
-                if (readerId.isEmpty()) readerId = "1";
                 handleGetOverdueCount(req, resp, out, readerId);
             } else if (pathInfo.startsWith("/") && pathInfo.length() > 1) {
                 // 查询单条借阅记录 /api/borrowing/{id}
@@ -101,8 +100,13 @@ public class BorrowingApiController extends HttpServlet {
     }
 
     private void handleGetMyRecords(HttpServletRequest req, HttpServletResponse resp, PrintWriter out) {
-        // readerId固定为1
-        String readerId = "1";
+        Reader currentUser = (Reader) req.getSession().getAttribute("currentUser");
+        if (currentUser == null || currentUser.getReaderId() == null) {
+            resp.setStatus(HttpServletResponse.SC_UNAUTHORIZED);
+            out.print("{\"message\":\"未登录或登录状态已失效\"}");
+            return;
+        }
+        String readerId = String.valueOf(currentUser.getReaderId());
         List<BorrowRecordDetail> records = service.findByReaderId(readerId);
         
         out.print("[");
@@ -136,7 +140,13 @@ public class BorrowingApiController extends HttpServlet {
     }
 
     private void handleBorrow(HttpServletRequest req, HttpServletResponse resp, PrintWriter out) {
-        String readerId = firstNonBlank(req.getParameter("readerId"), "1");
+        Reader currentUser = (Reader) req.getSession().getAttribute("currentUser");
+        if (currentUser == null || currentUser.getReaderId() == null) {
+            resp.setStatus(HttpServletResponse.SC_UNAUTHORIZED);
+            out.print("{\"success\":false,\"message\":\"未登录或登录状态已失效\"}");
+            return;
+        }
+        String readerId = String.valueOf(currentUser.getReaderId());
         String barcode = req.getParameter("barcode");
 
         if (barcode == null || barcode.isBlank()) {
@@ -163,7 +173,13 @@ public class BorrowingApiController extends HttpServlet {
     }
 
     private void handleReturn(HttpServletRequest req, HttpServletResponse resp, PrintWriter out) {
-        String readerId = firstNonBlank(req.getParameter("readerId"), "1");
+        Reader currentUser = (Reader) req.getSession().getAttribute("currentUser");
+        if (currentUser == null || currentUser.getReaderId() == null) {
+            resp.setStatus(HttpServletResponse.SC_UNAUTHORIZED);
+            out.print("{\"success\":false,\"message\":\"未登录或登录状态已失效\"}");
+            return;
+        }
+        String readerId = String.valueOf(currentUser.getReaderId());
         String barcode = req.getParameter("barcode");
 
         if (barcode == null || barcode.isBlank()) {

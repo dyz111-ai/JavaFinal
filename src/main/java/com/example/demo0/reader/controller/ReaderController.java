@@ -1,5 +1,6 @@
 package com.example.demo0.reader.controller;
 
+import com.example.demo0.auth.model.Reader;
 import com.example.demo0.reader.model.BorrowRecordDetail;
 import com.example.demo0.reader.service.BorrowingService;
 import jakarta.servlet.ServletException;
@@ -40,11 +41,17 @@ public class ReaderController extends HttpServlet {
     }
 
     private void loadBorrowRecords(HttpServletRequest req) {
-        // readerId固定为1
-        Integer readerId = 1;
-        List<BorrowRecordDetail> records = borrowingService.findByReaderId(String.valueOf(readerId));
-        int unreturnedCount = borrowingService.getUnreturnedCountByReader(String.valueOf(readerId));
-        int overdueCount = borrowingService.getOverdueUnreturnedCountByReader(String.valueOf(readerId));
+        Reader currentUser = (Reader) req.getSession().getAttribute("currentUser");
+        if (currentUser == null || currentUser.getReaderId() == null) {
+            req.setAttribute("records", java.util.List.of());
+            req.setAttribute("unreturnedCount", 0);
+            req.setAttribute("overdueCount", 0);
+            return;
+        }
+        String readerId = String.valueOf(currentUser.getReaderId());
+        List<BorrowRecordDetail> records = borrowingService.findByReaderId(readerId);
+        int unreturnedCount = borrowingService.getUnreturnedCountByReader(readerId);
+        int overdueCount = borrowingService.getOverdueUnreturnedCountByReader(readerId);
         
         req.setAttribute("records", records);
         req.setAttribute("unreturnedCount", unreturnedCount);

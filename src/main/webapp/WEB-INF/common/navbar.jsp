@@ -14,11 +14,31 @@
             <a href="<%=ctx%>/category/display" class="nav-item <%=currentPath.startsWith("/category") ? "active" : ""%>">图书分类</a>
             <a href="<%=ctx%>/reader/borrow-records" class="nav-item <%=currentPath.startsWith("/reader/borrow-") ? "active" : ""%>">我的借阅</a>
             <a href="<%=ctx%>/reader/booklists" class="nav-item <%=currentPath.startsWith("/reader/booklists") ? "active" : ""%>">个性化推荐</a>
+            <a href="<%=ctx%>/reader/space" class="nav-item <%=currentPath.startsWith("/reader/space") ? "active" : ""%>">座位预约</a>
         </nav>
         
-        <!-- 登录按钮（暂时不实现登录功能） -->
-        <div class="auth-btn">
-            <a href="#" class="login">登录</a>
+        <div class="nav-actions">
+            <div class="nav-divider"></div>
+            <% if(session.getAttribute("currentUser") == null) { %>
+                <a href="<%=ctx%>/auth/login" class="action-link">登录</a>
+                <a href="<%=ctx%>/auth/register" class="action-primary">注册账号</a>
+            <% } else { %>
+                <span class="welcome-text">你好，<strong>${sessionScope.currentUser.nickname}</strong></span>
+                <a href="<%=ctx%>/reader/profile" class="nav-pill" title="个人中心">
+                    <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                        <path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2"></path>
+                        <circle cx="12" cy="7" r="4"></circle>
+                    </svg>
+                    <span>我的</span>
+                </a>
+                <a href="<%=ctx%>/auth/logout" class="icon-btn" title="退出登录">
+                    <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                        <path d="M9 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h4"></path>
+                        <polyline points="16 17 21 12 16 7"></polyline>
+                        <line x1="21" y1="12" x2="9" y2="12"></line>
+                    </svg>
+                </a>
+            <% } %>
         </div>
     </div>
 </header>
@@ -117,18 +137,73 @@
 
 .nav-item:hover { background: transparent; }
 
-/* ---------- 登录按钮 ---------- */
-.auth-btn .login {
-    color: #004b8d;
-    background: #fff;
-    padding: 0.4rem 1rem;
-    border-radius: 6px;
-    text-decoration: none;
-    font-weight: 600;
-    font-size: 0.9rem;
+.nav-actions {
+    display: flex;
+    align-items: center;
+    gap: 0.75rem;
 }
 
-.auth-btn .login:hover { background: #f0f0f0; }
+.nav-divider {
+    width: 1px;
+    height: 24px;
+    background-color: rgba(255,255,255,0.35);
+}
+
+.action-link {
+    color: #e2e8f0;
+    font-weight: 600;
+    text-decoration: none;
+    padding: 0.4rem 0.9rem;
+    border-radius: 999px;
+    transition: color .2s ease, background .2s ease;
+}
+
+.action-link:hover { background: rgba(255,255,255,0.12); color: #fff; }
+
+.action-primary {
+    color: #004b8d;
+    background: #fff;
+    padding: 0.45rem 1.1rem;
+    border-radius: 999px;
+    text-decoration: none;
+    font-weight: 700;
+    font-size: 0.9rem;
+    box-shadow: 0 4px 10px rgba(0,0,0,0.08);
+}
+
+.action-primary:hover { background: #f8fafc; }
+
+.welcome-text {
+    color: #e2e8f0;
+    font-size: 0.9rem;
+    display: flex;
+    gap: 0.2rem;
+}
+
+.nav-pill {
+    display: inline-flex;
+    align-items: center;
+    gap: 0.35rem;
+    padding: 0.45rem 0.9rem;
+    border-radius: 10px;
+    background: rgba(255,255,255,0.12);
+    color: #fff;
+    text-decoration: none;
+    font-weight: 600;
+}
+
+.nav-pill:hover { background: rgba(255,255,255,0.2); }
+
+.icon-btn {
+    color: #e2e8f0;
+    display: inline-flex;
+    align-items: center;
+    padding: 0.35rem;
+    border-radius: 8px;
+    transition: background .2s ease, color .2s ease;
+}
+
+.icon-btn:hover { background: rgba(255,255,255,0.12); color: #fff; }
 </style>
 
 <script>
