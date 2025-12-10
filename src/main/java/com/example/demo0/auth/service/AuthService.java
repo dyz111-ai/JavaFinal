@@ -39,12 +39,18 @@ public class AuthService {
         return null;
     }
 
-    // 【新增】更新个人信息
+    // 更新个人信息（支持用户名、昵称、真实姓名、头像）
     public void updateProfile(Reader reader) {
         if (reader.getNickname() == null || reader.getNickname().trim().isEmpty()) {
             throw new RuntimeException("昵称不能为空");
         }
-        // 这里调用上面声明的 repository 变量
+        if (reader.getUsername() == null || reader.getUsername().trim().isEmpty()) {
+            throw new RuntimeException("用户名不能为空");
+        }
+        // 校验用户名唯一（排除自身）
+        if (repository.existsUsernameExcept(reader.getUsername(), reader.getReaderId())) {
+            throw new RuntimeException("用户名已存在，请更换后再试");
+        }
         repository.update(reader);
     }
 }

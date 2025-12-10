@@ -65,16 +65,35 @@ public class ReaderRepository {
         }
     }
 
-    // 【关键修复】更新用户资料
-    // 这里直接写 SQL 更新语句，而不是调用 repository.update
+    // 判断除自己外是否存在相同用户名
+    public boolean existsUsernameExcept(String username, int readerId) {
+        String sql = "SELECT COUNT(1) FROM Reader WHERE Username = ? AND ReaderID <> ?";
+        try (Connection conn = dataSource.getConnection();
+             PreparedStatement ps = conn.prepareStatement(sql)) {
+            ps.setString(1, username);
+            ps.setInt(2, readerId);
+            try (ResultSet rs = ps.executeQuery()) {
+                if (rs.next()) {
+                    return rs.getInt(1) > 0;
+                }
+            }
+        } catch (SQLException e) {
+            throw new RuntimeException("检查用户名唯一性失败: " + e.getMessage());
+        }
+        return false;
+    }
+
+    // 更新用户资料：用户名、真实姓名、昵称、头像
     public void update(Reader reader) {
-        String sql = "UPDATE Reader SET Fullname = ?, Nickname = ? WHERE ReaderID = ?";
+        String sql = "UPDATE Reader SET Username = ?, Fullname = ?, Nickname = ?, Avatar = ? WHERE ReaderID = ?";
         try (Connection conn = dataSource.getConnection();
              PreparedStatement ps = conn.prepareStatement(sql)) {
 
-            ps.setString(1, reader.getFullname());
-            ps.setString(2, reader.getNickname());
-            ps.setInt(3, reader.getReaderId());
+            ps.setString(1, reader.getUsername());
+            ps.setString(2, reader.getFullname());
+            ps.setString(3, reader.getNickname());
+            ps.setString(4, reader.getAvatar());
+            ps.setInt(5, reader.getReaderId());
 
             ps.executeUpdate();
         } catch (SQLException e) {

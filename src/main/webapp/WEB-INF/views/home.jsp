@@ -152,13 +152,7 @@
                     </div>
                     <a class="entry-link" href="<%=request.getContextPath()%>/category/display">进入</a>
                 </div>
-                <div class="entry-card">
-                    <div class="entry-left">
-                        <img src="<%=request.getContextPath()%>/assets/icons/seat.svg" alt="座位">
-                        <span>座位预约</span>
-                    </div>
-                    <a class="entry-link" href="<%=request.getContextPath()%>/reader/space">进入</a>
-                </div>
+
             </div>
         </section>
 

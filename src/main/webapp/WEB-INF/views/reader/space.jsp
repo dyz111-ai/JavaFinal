@@ -672,8 +672,8 @@
                 dateEl.value = dateEl.options[0].value;
             }
         }
-        loadBuildings();
-        loadMy();
+    loadBuildings();
+    loadMy();
     })();
 </script>
 </body>

@@ -1,58 +1,96 @@
 <%@ page contentType="text/html;charset=UTF-8" language="java" %>
 <%@ page import="com.example.demo0.auth.model.Reader" %>
-<%@ taglib prefix="c" uri="jakarta.tags.core" %>
 <!DOCTYPE html>
 <html lang="zh-CN">
 <head>
     <meta charset="UTF-8">
     <title>编辑资料 - 图书馆系统</title>
     <link rel="stylesheet" href="<%=request.getContextPath()%>/assets/base.css" />
-    <link rel="stylesheet" href="<%=request.getContextPath()%>/assets/main.css" />
     <style>
-        body { background-color: #f3f4f6; display: flex; justify-content: center; padding-top: 50px; }
-        .edit-card { background: white; width: 100%; max-width: 500px; padding: 30px; border-radius: 12px; box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.1); }
-        .form-group { margin-bottom: 20px; }
-        .form-label { display: block; margin-bottom: 8px; font-weight: 500; color: #374151; }
-        .form-input { width: 100%; padding: 10px; border: 1px solid #d1d5db; border-radius: 6px; font-size: 14px; }
-        .form-input:read-only { background-color: #f9fafb; color: #6b7280; cursor: not-allowed; }
-        .btn-group { display: flex; gap: 10px; margin-top: 30px; }
-        .btn-save { flex: 2; background-color: #2563eb; color: white; padding: 10px; border-radius: 6px; border: none; cursor: pointer; font-size: 16px; }
-        .btn-cancel { flex: 1; background-color: white; border: 1px solid #d1d5db; color: #374151; padding: 10px; border-radius: 6px; text-align: center; cursor: pointer; text-decoration: none; display: flex; align-items: center; justify-content: center;}
+        body { background-color: #f3f4f6; padding: 20px; font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif; }
+        .container { max-width: 720px; margin: 0 auto; background: white; border-radius: 12px; box-shadow: 0 1px 3px rgba(0,0,0,0.1); overflow: hidden; }
+        .header { background: linear-gradient(135deg, #2563eb 0%, #1e40af 100%); padding: 28px; color: white; }
+        .header h1 { margin: 0; font-size: 22px; }
+        .body { padding: 28px; }
+        .form-grid { display: grid; grid-template-columns: 1fr; gap: 18px; }
+        label { display: block; font-size: 14px; color: #374151; margin-bottom: 6px; }
+        input[type="text"] { width: 100%; padding: 10px 12px; border: 1px solid #d1d5db; border-radius: 8px; font-size: 14px; }
+        .actions { margin-top: 24px; display: flex; gap: 10px; }
+        .btn { padding: 10px 18px; border-radius: 8px; font-size: 14px; text-decoration: none; border: none; cursor: pointer; transition: all 0.2s; }
+        .btn-primary { background: #2563eb; color: white; }
+        .btn-primary:hover { background: #1d4ed8; }
+        .btn-outline { border: 1px solid #d1d5db; color: #374151; background: white; }
+        .btn-outline:hover { background: #f9fafb; }
+        .error { background:#fef2f2; color:#b91c1c; padding:12px 16px; border-radius: 8px; border:1px solid #fecdd3; margin-bottom:16px; }
+        .tip { color:#6b7280; font-size:13px; margin-top:4px; }
     </style>
 </head>
 <body>
+<%
+    Reader user = (Reader) session.getAttribute("currentUser");
+    if (user == null) {
+        response.sendRedirect(request.getContextPath() + "/auth/login");
+        return;
+    }
+    String err = (String) session.getAttribute("profileUpdateError");
+    if (err != null) {
+        session.removeAttribute("profileUpdateError");
+    }
+%>
 
-<div class="edit-card">
-    <h2 style="margin-top: 0; margin-bottom: 24px; color: #111827;">编辑个人资料</h2>
+<div class="container">
+    <div class="header">
+        <h1>编辑个人资料</h1>
+        <p style="margin:8px 0 0; opacity:0.9;">更新你的昵称与真实姓名</p>
+    </div>
+    <div class="body">
+        <% if (err != null && !err.isBlank()) { %>
+        <div class="error"><%= err %></div>
+        <% } %>
+        <form method="post" action="<%=request.getContextPath()%>/reader/profile/edit">
+            <div class="form-grid">
+                <div>
+                    <label for="username">用户名（必填）</label>
+                    <input id="username" name="username" type="text" value="<%= user.getUsername() == null ? "" : user.getUsername() %>" required />
+                    <div class="tip">登录账号，需唯一</div>
+                </div>
+                <div>
+                    <label for="nickname">昵称（必填）</label>
+                    <input id="nickname" name="nickname" type="text" value="<%= user.getNickname() == null ? "" : user.getNickname() %>" required />
+                    <div class="tip">用于展示的名字，不能为空</div>
+                </div>
+                <div>
+                    <label for="fullname">真实姓名（可选）</label>
+                    <input id="fullname" name="fullname" type="text" value="<%= user.getFullname() == null ? "" : user.getFullname() %>" />
+                    <div class="tip">便于馆内识别，可留空</div>
+                </div>
+                <div>
+                    <label for="avatar">头像地址（可选）</label>
+                    <input id="avatar" name="avatar" type="text" value="<%= user.getAvatar() == null ? "" : user.getAvatar() %>" />
+                    <div class="tip">可填写图片 URL，或下方上传头像</div>
+                </div>
+            </div>
+            <div class="actions">
+                <a class="btn btn-outline" href="<%=request.getContextPath()%>/reader/profile">返回</a>
+                <button type="submit" class="btn btn-primary">保存</button>
+            </div>
+        </form>
 
-    <c:if test="${not empty error}">
-        <div style="background:#fef2f2; color:#dc2626; padding:10px; border-radius:6px; margin-bottom:20px; font-size:14px;">
-                ${error}
-        </div>
-    </c:if>
-
-    <form action="<%=request.getContextPath()%>/reader/profile/edit" method="post">
-        <div class="form-group">
-            <label class="form-label">账号 (不可修改)</label>
-            <input type="text" class="form-input" value="${sessionScope.currentUser.username}" readonly>
-        </div>
-
-        <div class="form-group">
-            <label class="form-label">真实姓名</label>
-            <input type="text" name="fullname" class="form-input" value="${sessionScope.currentUser.fullname}" placeholder="请输入真实姓名">
-        </div>
-
-        <div class="form-group">
-            <label class="form-label">昵称</label>
-            <input type="text" name="nickname" class="form-input" value="${sessionScope.currentUser.nickname}" required placeholder="请输入昵称">
-        </div>
-
-        <div class="btn-group">
-            <a href="<%=request.getContextPath()%>/reader/profile" class="btn-cancel">取消</a>
-            <button type="submit" class="btn-save">保存修改</button>
-        </div>
-    </form>
+        <form method="post" action="<%=request.getContextPath()%>/reader/profile/avatar" enctype="multipart/form-data" style="margin-top:18px;">
+            <div class="form-grid">
+                <div>
+                    <label for="avatarFile">上传头像（jpg/jpeg/png，≤1MB）</label>
+                    <input id="avatarFile" name="avatarFile" type="file" accept=".jpg,.jpeg,.png" />
+                    <div class="tip">上传后将自动保存并更新头像地址</div>
+                </div>
+            </div>
+            <div class="actions">
+                <button type="submit" class="btn btn-primary">上传头像</button>
+            </div>
+        </form>
+    </div>
 </div>
 
 </body>
 </html>
+

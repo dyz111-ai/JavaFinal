@@ -29,6 +29,8 @@
         .btn-primary:hover { background: #1d4ed8; }
         .btn-outline { border: 1px solid #d1d5db; color: #374151; }
         .btn-outline:hover { background: #f9fafb; }
+        .status-ok { color:#059669; }
+        .status-bad { color:#dc2626; }
     </style>
 </head>
 <body>
@@ -50,7 +52,18 @@
 
     <div class="profile-header">
         <div class="avatar">
-            <%= user.getNickname().substring(0, 1).toUpperCase() %>
+            <%
+                String avatar = user.getAvatar();
+                if (avatar != null && !avatar.isBlank()) {
+            %>
+                <img src="<%= avatar %>" alt="avatar" style="width:80px;height:80px;border-radius:50%;object-fit:cover;" />
+            <%
+                } else {
+            %>
+                <%= user.getNickname().substring(0, 1).toUpperCase() %>
+            <%
+                }
+            %>
         </div>
         <div class="info">
             <h1><%= user.getNickname() %></h1>
@@ -60,7 +73,14 @@
 
     <div class="profile-body">
         <div class="section-title">基本信息</div>
+        <%
+            String statusColor = "正常".equals(user.getAccountStatus()) ? "#059669" : "#dc2626";
+        %>
         <div class="info-grid">
+            <div class="info-item">
+                <label>用户名</label>
+                <div><%= user.getUsername() %></div>
+            </div>
             <div class="info-item">
                 <label>真实姓名</label>
                 <div><%= user.getFullname() == null ? "未填写" : user.getFullname() %></div>
@@ -68,7 +88,7 @@
             <div class="info-item">
                 <label>账户状态</label>
                 <div>
-                    <span style="color: <%= "正常".equals(user.getAccountStatus()) ? "#059669" : "#dc2626" %>">
+                    <span class="<%= "正常".equals(user.getAccountStatus()) ? "status-ok" : "status-bad" %>">
                         <%= user.getAccountStatus() %>
                     </span>
                 </div>
