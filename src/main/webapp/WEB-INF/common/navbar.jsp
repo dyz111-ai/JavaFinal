@@ -13,7 +13,6 @@
             <a href="<%=ctx%>/book/search" class="nav-item <%=currentPath.startsWith("/book/search") ? "active" : ""%>">图书搜索</a>
             <a href="<%=ctx%>/category/display" class="nav-item <%=currentPath.startsWith("/category") ? "active" : ""%>">图书分类</a>
             <a href="<%=ctx%>/reader/borrow-records" class="nav-item <%=currentPath.startsWith("/reader/borrow-") ? "active" : ""%>">我的借阅</a>
-            <a href="<%=ctx%>/reader/booklists" class="nav-item <%=currentPath.startsWith("/reader/booklists") ? "active" : ""%>">个性化推荐</a>
             <a href="<%=ctx%>/reader/space" class="nav-item <%=currentPath.startsWith("/reader/space") ? "active" : ""%>">座位预约</a>
         </nav>
         
