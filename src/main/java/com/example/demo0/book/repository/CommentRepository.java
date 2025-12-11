@@ -30,7 +30,7 @@ public class CommentRepository {
 
     public List<CommentRecord> findByIsbn(String isbn, int limit) {
         if (isbn == null || isbn.isBlank()) return List.of();
-        String sql = "SELECT readerid, isbn, rating, reviewcontent, createtime, status " +
+        String sql = "SELECT commentid, readerid, isbn, rating, reviewcontent, createtime, status " +
                      "FROM public.comment_table WHERE lower(regexp_replace(trim(isbn), '[^0-9x]', '', 'g')) = lower(regexp_replace(trim(?), '[^0-9x]', '', 'g')) ORDER BY createtime DESC LIMIT ?";
         try (Connection conn = dataSource.getConnection();
              PreparedStatement ps = conn.prepareStatement(sql)) {
@@ -50,8 +50,8 @@ public class CommentRepository {
     }
 
     public List<CommentRecord> findById(long id) {
-        String sql = "SELECT readerid, isbn, rating, reviewcontent, createtime, status " +
-                     "FROM public.comment_table WHERE id = ?";
+        String sql = "SELECT commentid, readerid, isbn, rating, reviewcontent, createtime, status " +
+                     "FROM public.comment_table WHERE commentid = ?";
         try (Connection conn = dataSource.getConnection();
              PreparedStatement ps = conn.prepareStatement(sql)) {
             ps.setLong(1, id);
@@ -88,6 +88,23 @@ public class CommentRepository {
         }
     }
 
+    /** 向举报表插入一条记录，保持评论原状态不变 */
+    public int addReport(long commentId, long readerId, String reason) {
+        // schema_new.sql 中列名：CommentID, ReaderID, ReportReason, ReportTime, Status, LibrarianID
+        // 未指定管理员时状态置为“待处理”，ReportTime 默认 CURRENT_TIMESTAMP
+        String sql = "INSERT INTO public.report (commentid, readerid, reportreason, status) VALUES (?, ?, ?, ?)";
+        try (Connection conn = dataSource.getConnection();
+             PreparedStatement ps = conn.prepareStatement(sql)) {
+            ps.setLong(1, commentId);
+            ps.setLong(2, readerId);
+            ps.setString(3, safeVarchar(reason));
+            ps.setString(4, "待处理");
+            return ps.executeUpdate();
+        } catch (SQLException e) {
+            throw new RuntimeException("举报评论失败: " + e.getMessage(), e);
+        }
+    }
+
     private short normalizeRating(Short r) {
         if (r == null) return 5; // 默认好评
         int x = Math.max(1, Math.min(5, r));
@@ -105,6 +122,7 @@ public class CommentRepository {
 
     private CommentRecord map(ResultSet rs) throws SQLException {
         CommentRecord c = new CommentRecord();
+        c.setId(rs.getObject("commentid") == null ? null : rs.getLong("commentid"));
         c.setReaderId(rs.getObject("readerid") == null ? null : rs.getLong("readerid"));
         c.setIsbn(rs.getString("isbn"));
         c.setRating(rs.getObject("rating") == null ? null : rs.getShort("rating"));

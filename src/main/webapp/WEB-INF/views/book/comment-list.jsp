@@ -63,6 +63,11 @@
   </div>
 
   <%
+    String reportedIdParam = request.getParameter("reportedId");
+    String reportParam = request.getParameter("report");
+    Long reportedId = null;
+    try { if (reportedIdParam != null) reportedId = Long.parseLong(reportedIdParam); } catch (Exception ignore) {}
+
     if (comments.isEmpty()) {
   %>
     <div class="card muted">暂无评论。</div>
@@ -79,6 +84,7 @@
           for (int i=r;i<5;i++) sb.append("☆");
           stars = sb.toString();
         }
+        boolean justReported = "1".equals(reportParam) && reportedId != null && c.getId() != null && reportedId.equals(c.getId());
   %>
     <div class="card">
       <div class="row">
@@ -88,6 +94,24 @@
       <div class="rating"><%= stars %></div>
       <p style="margin-top:8px; white-space:pre-wrap;"><%= c.getReviewContent()==null? "" : c.getReviewContent() %></p>
       <div class="muted">状态：<%= c.getStatus()==null? "" : c.getStatus() %></div>
+      <div style="margin-top:10px;">
+        <%
+          if (justReported) {
+        %>
+          <span class="muted" style="color:#ef4444;font-weight:600;">已举报，待处理</span>
+        <%
+          } else {
+        %>
+          <form method="post" action="<%=ctx%>/comment/report" style="display:flex;gap:8px;align-items:flex-start;flex-wrap:wrap;">
+            <input type="hidden" name="commentId" value="<%= c.getId() == null ? "" : c.getId() %>">
+            <input type="hidden" name="redirect" value="<%= redirect %>">
+            <input name="reason" maxlength="100" placeholder="举报原因（可选）" style="flex:1 1 260px">
+            <button class="btn" type="submit" style="flex:0 0 auto;background:#ef4444;">举报</button>
+          </form>
+        <%
+          }
+        %>
+      </div>
     </div>
   <%
       }

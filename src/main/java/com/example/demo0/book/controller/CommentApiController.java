@@ -18,7 +18,7 @@ import java.util.List;
  * - GET /comment/search?ISBN=... -> JSON 列表
  * - POST /comment/add (表单) -> 写死 readerId=1，返回 JSON；若携带 redirect 参数则重定向
  */
-@WebServlet(urlPatterns = {"/comment/search", "/comment/add"})
+@WebServlet(urlPatterns = {"/comment/search", "/comment/add", "/comment/report"})
 public class CommentApiController extends HttpServlet {
 
     private final CommentService service = new CommentService();
@@ -38,6 +38,9 @@ public class CommentApiController extends HttpServlet {
         String path = req.getServletPath();
         if ("/comment/add".equals(path)) {
             handleAdd(req, resp);
+            return;
+        } else if ("/comment/report".equals(path)) {
+            handleReport(req, resp);
             return;
         }
         resp.sendError(HttpServletResponse.SC_NOT_FOUND);
@@ -92,6 +95,34 @@ public class CommentApiController extends HttpServlet {
         resp.setContentType("application/json; charset=UTF-8");
         try (PrintWriter out = resp.getWriter()) {
             out.print("{\"Message\":" + quote(affected>0?"评论添加成功":"评论添加失败") + "}");
+        }
+    }
+
+    private void handleReport(HttpServletRequest req, HttpServletResponse resp) throws IOException {
+        String idStr = req.getParameter("commentId");
+        String reason = req.getParameter("reason");
+        long commentId = -1;
+        try { commentId = Long.parseLong(idStr); } catch (Exception ignored) {}
+        // 未做登录，这里按原项目示例固定 readerId=1
+        long readerId = 1L;
+
+        boolean ok = service.reportComment(commentId, readerId, reason);
+
+        String redirect = req.getParameter("redirect");
+        if (redirect != null && !redirect.isBlank()) {
+            String target = redirect;
+            if (!target.startsWith("/") && !target.startsWith("http")) {
+                target = "/" + target;
+            }
+            String sep = target.contains("?") ? "&" : "?";
+            resp.sendRedirect(req.getContextPath() + target + sep + "report=" + (ok ? "1" : "0") + "&reportedId=" + commentId);
+            return;
+        }
+
+        resp.setCharacterEncoding(StandardCharsets.UTF_8.name());
+        resp.setContentType("application/json; charset=UTF-8");
+        try (PrintWriter out = resp.getWriter()) {
+            out.print("{\"success\":" + ok + ",\"message\":" + quote(ok ? "已提交举报" : "举报失败") + "}");
         }
     }
 

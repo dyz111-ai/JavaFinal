@@ -21,6 +21,12 @@ public class CommentService {
         return repository.findById(id);
     }
 
+    /** 举报评论：插入举报表，保持原评论状态 */
+    public boolean reportComment(long commentId, long readerId, String reason) {
+        if (commentId <= 0 || readerId <= 0) return false;
+        return repository.addReport(commentId, readerId, reason) > 0;
+    }
+
     /** 新增评论，readerId 按要求可传固定值 1 */
     public int addComment(long readerId, String isbn, Short rating, String content) {
         String norm = normalizeIsbn(isbn);
@@ -46,6 +52,7 @@ public class CommentService {
         return t.replaceAll("[^0-9Xx]", "");
     }
 }
+
 
 
 
