@@ -1,4 +1,4 @@
-package com.example.demo0.db;
+package com.example.demo0;
 
 import jakarta.annotation.Resource;
 import jakarta.servlet.annotation.WebServlet;
