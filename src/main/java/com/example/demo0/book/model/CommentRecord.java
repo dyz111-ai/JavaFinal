@@ -5,6 +5,7 @@ import java.time.ZoneOffset;
 import java.sql.Timestamp;
 
 public class CommentRecord {
+    private Long id;
     private Long readerId;
     private String isbn;
     private Short rating;
@@ -14,6 +15,9 @@ public class CommentRecord {
 
     public Long getReaderId() { return readerId; }
     public void setReaderId(Long readerId) { this.readerId = readerId; }
+
+    public Long getId() { return id; }
+    public void setId(Long id) { this.id = id; }
 
     public String getIsbn() { return isbn; }
     public void setIsbn(String isbn) { this.isbn = isbn; }
