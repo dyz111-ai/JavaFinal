@@ -28,7 +28,7 @@ public class BookAdminRepository {
     public List<BookAdminDto> searchBooks(String search) {
         List<BookAdminDto> list = new ArrayList<>();
         // 关联查询：BookInfo + 统计 Book 表中的各状态数量 + 获取一个位置样本
-        String sql = "SELECT i.isbn, i.title, i.author, " +
+        String sql = "SELECT i.isbn, i.title, i.author, i.publisher, i.publishdate, " +
                 "COUNT(b.bookid) as total_physical, " +
                 "COUNT(CASE WHEN b.status = '正常' THEN 1 END) as available, " +
                 "COUNT(CASE WHEN b.status = '借出' THEN 1 END) as borrowed, " +
@@ -36,17 +36,19 @@ public class BookAdminRepository {
                 "(SELECT location FROM public.book WHERE isbn = i.isbn LIMIT 1) as sample_location " +
                 "FROM public.bookinfo i " +
                 "LEFT JOIN public.book b ON i.isbn = b.isbn " +
-                "WHERE i.title ILIKE ? OR i.author ILIKE ? OR i.isbn ILIKE ? " +
-                "GROUP BY i.isbn, i.title, i.author " +
+                "WHERE (? IS NULL OR ? = '' OR i.title ILIKE ? OR i.author ILIKE ? OR i.isbn ILIKE ?) " +
+                "GROUP BY i.isbn, i.title, i.author, i.publisher, i.publishdate " +
                 "ORDER BY i.title";
 
         try (Connection conn = dataSource.getConnection();
              PreparedStatement ps = conn.prepareStatement(sql)) {
 
             String term = "%" + (search == null ? "" : search.trim()) + "%";
-            ps.setString(1, term);
-            ps.setString(2, term);
-            ps.setString(3, term);
+            ps.setString(1, search); // 原始search参数用于IS NULL检查
+            ps.setString(2, search); // 原始search参数用于空字符串检查
+            ps.setString(3, term);   // 模糊搜索书名
+            ps.setString(4, term);   // 模糊搜索作者
+            ps.setString(5, term);   // 模糊搜索ISBN
 
             try (ResultSet rs = ps.executeQuery()) {
                 while (rs.next()) {
@@ -54,6 +56,8 @@ public class BookAdminRepository {
                     dto.setIsbn(rs.getString("isbn"));
                     dto.setTitle(rs.getString("title"));
                     dto.setAuthor(rs.getString("author"));
+                    dto.setPublisher(rs.getString("publisher")); // 设置出版社
+                    dto.setPublishDate(rs.getString("publishdate")); // 设置出版日期
                     dto.setLocation(rs.getString("sample_location")); // 获取位置
 
                     int total = rs.getInt("total_physical");

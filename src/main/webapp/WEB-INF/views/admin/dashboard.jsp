@@ -19,11 +19,14 @@
             transform: translateY(0);
             background-color: rgba(255, 255, 255, 0.7);
             backdrop-filter: blur(4px);
+            border: 1px solid #000000;
+            text-decoration: none;
         }
 
         .dashboard-card:hover {
             transform: translateY(-0.5rem);
             box-shadow: 0 20px 25px -5px rgba(0, 0, 0, 0.1), 0 10px 10px -5px rgba(0, 0, 0, 0.04);
+            border: 1px solid #000000;
         }
 
         .card-title {
@@ -49,7 +52,7 @@
             功能导航
         </h2>
 
-        <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-8">
+        <div class="grid grid-cols-2 gap-8">
             <a href="<%= request.getContextPath() %>/admin/books" class="dashboard-card border-l-4 border-blue-500 hover:bg-blue-50/60">
                 <h3 class="card-title">图书管理</h3>
                 <p class="card-description">新增、查询、修改和删除图书信息。</p>
@@ -60,12 +63,12 @@
                 <p class="card-description">发布图书馆最新通知与公告。</p>
             </a>
 
-            <a href="#" class="dashboard-card border-l-4 border-indigo-500 hover:bg-indigo-50/60">
+            <a href="<%= request.getContextPath() %>/admin/purchase-analysis" class="dashboard-card border-l-4 border-indigo-500 hover:bg-indigo-50/60">
                 <h3 class="card-title">采购分析</h3>
                 <p class="card-description">基于借阅数据分析采购需求。</p>
             </a>
 
-            <a href="#" class="dashboard-card border-l-4 border-red-500 hover:bg-red-50/60">
+            <a href="<%= request.getContextPath() %>/admin/report-handling" class="dashboard-card border-l-4 border-red-500 hover:bg-red-50/60">
                 <h3 class="card-title">举报处理</h3>
                 <p class="card-description">处理用户提交的各类举报信息。</p>
             </a>

@@ -3,7 +3,7 @@
     import="java.util.List"
 %>
 <!DOCTYPE html>
-<html>
+<html lang="zh-CN">
 <head>
 <meta charset="UTF-8">
 <title>图书管理 - 管理员界面</title>
@@ -139,23 +139,23 @@
             <form id="add-copy-form" onsubmit="handleAddCopies(); return false;">
                 <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
                     <div>
-                        <label class="block font-medium mb-1">ISBN</label>
-                        <input type="text" id="isbn" class="form-input" required>
+                        <label for="isbn" class="block font-medium mb-1">ISBN</label>
+                        <input type="text" id="isbn" class="form-input" required placeholder="请输入图书ISBN" aria-label="图书ISBN">
                     </div>
                     <div>
-                        <label class="block font-medium mb-1">入库数量</label>
-                        <input type="number" id="quantity" class="form-input" min="1" value="1" required>
+                        <label for="quantity" class="block font-medium mb-1">入库数量</label>
+                        <input type="number" id="quantity" class="form-input" min="1" value="1" required placeholder="请输入入库数量" aria-label="图书入库数量">
                     </div>
                     <div>
                         <label class="block font-medium mb-1">楼宇</label>
-                        <select id="building" class="form-input" onchange="updateFloors()" required>
+                        <select id="building" class="form-input" onchange="updateFloors()" required aria-label="选择楼宇">
                             <option value="A">A栋</option>
                             <option value="B">B栋</option>
                         </select>
                     </div>
                     <div>
                         <label class="block font-medium mb-1">楼层</label>
-                        <select id="floor" class="form-input" onchange="updateZones()" required>
+                        <select id="floor" class="form-input" onchange="updateZones()" required aria-label="选择楼层">
                             <option value="1">1楼</option>
                             <option value="2">2楼</option>
                             <option value="3">3楼</option>
@@ -163,7 +163,7 @@
                     </div>
                     <div>
                         <label class="block font-medium mb-1">区域</label>
-                        <select id="zone" class="form-input" onchange="updateShelves()" required>
+                        <select id="zone" class="form-input" onchange="updateShelves()" required aria-label="选择区域">
                             <option value="A">A区</option>
                             <option value="B">B区</option>
                             <option value="C">C区</option>
@@ -171,7 +171,7 @@
                     </div>
                     <div>
                         <label class="block font-medium mb-1">书架编号</label>
-                        <select id="shelf" class="form-input" required>
+                        <select id="shelf" class="form-input" required aria-label="选择书架编号">
                             <option value="1">1号架</option>
                             <option value="2">2号架</option>
                             <option value="3">3号架</option>
@@ -189,11 +189,12 @@
         <!-- 搜索部分 -->
         <div class="bg-white p-6 rounded-lg shadow-sm mb-6 search-container">
             <h2 class="text-xl font-bold mb-4">图书搜索</h2>
-            <div class="flex flex-col md:flex-row gap-4">
-                <input type="text" id="search-text" placeholder="输入书名、ISBN或作者进行搜索" class="form-input flex-grow">
-                <button onclick="handleSearch()" class="btn-primary whitespace-nowrap">搜索图书</button>
-                <button onclick="showAllBooks()" class="btn-secondary whitespace-nowrap">显示全部图书</button>
-            </div>
+            <form id="search-form" class="flex flex-col md:flex-row gap-4">
+                <label for="search-text" class="sr-only">搜索关键词</label>
+                <input type="text" id="search-text" name="search" placeholder="输入书名、ISBN或作者进行搜索" class="form-input flex-grow" aria-label="搜索关键词">
+                <button type="submit" class="btn-primary whitespace-nowrap">搜索图书</button>
+                <button type="button" onclick="showAllBooks()" class="btn-secondary whitespace-nowrap">显示全部图书</button>
+            </form>
         </div>
         
         <!-- 搜索结果 -->
@@ -233,14 +234,14 @@
                 <div class="space-y-4 mb-4">
                     <div>
                         <label class="block font-medium mb-1">楼宇</label>
-                        <select id="edit-building" class="form-input" onchange="updateEditFloors()" required>
+                        <select id="edit-building" class="form-input" onchange="updateEditFloors()" required aria-label="编辑楼宇">
                             <option value="A">A栋</option>
                             <option value="B">B栋</option>
                         </select>
                     </div>
                     <div>
                         <label class="block font-medium mb-1">楼层</label>
-                        <select id="edit-floor" class="form-input" onchange="updateEditZones()" required>
+                        <select id="edit-floor" class="form-input" onchange="updateEditZones()" required aria-label="编辑楼层">
                             <option value="1">1楼</option>
                             <option value="2">2楼</option>
                             <option value="3">3楼</option>
@@ -248,7 +249,7 @@
                     </div>
                     <div>
                         <label class="block font-medium mb-1">区域</label>
-                        <select id="edit-zone" class="form-input" onchange="updateEditShelves()" required>
+                        <select id="edit-zone" class="form-input" onchange="updateEditShelves()" required aria-label="编辑区域">
                             <option value="A">A区</option>
                             <option value="B">B区</option>
                             <option value="C">C区</option>
@@ -256,7 +257,7 @@
                     </div>
                     <div>
                         <label class="block font-medium mb-1">书架编号</label>
-                        <select id="edit-shelf" class="form-input" required>
+                        <select id="edit-shelf" class="form-input" required aria-label="编辑书架编号">
                             <option value="1">1号架</option>
                             <option value="2">2号架</option>
                             <option value="3">3号架</option>
@@ -282,14 +283,14 @@
                 <div class="space-y-4 mb-4">
                     <div>
                         <label class="block font-medium mb-1">楼宇</label>
-                        <select id="return-building" class="form-input" onchange="updateReturnFloors()" required>
+                        <select id="return-building" class="form-input" onchange="updateReturnFloors()" required aria-label="归还楼宇">
                             <option value="A">A栋</option>
                             <option value="B">B栋</option>
                         </select>
                     </div>
                     <div>
                         <label class="block font-medium mb-1">楼层</label>
-                        <select id="return-floor" class="form-input" onchange="updateReturnZones()" required>
+                        <select id="return-floor" class="form-input" onchange="updateReturnZones()" required aria-label="归还楼层">
                             <option value="1">1楼</option>
                             <option value="2">2楼</option>
                             <option value="3">3楼</option>
@@ -297,7 +298,7 @@
                     </div>
                     <div>
                         <label class="block font-medium mb-1">区域</label>
-                        <select id="return-zone" class="form-input" onchange="updateReturnShelves()" required>
+                        <select id="return-zone" class="form-input" onchange="updateReturnShelves()" required aria-label="归还区域">
                             <option value="A">A区</option>
                             <option value="B">B区</option>
                             <option value="C">C区</option>
@@ -305,7 +306,7 @@
                     </div>
                     <div>
                         <label class="block font-medium mb-1">书架编号</label>
-                        <select id="return-shelf" class="form-input" required>
+                        <select id="return-shelf" class="form-input" required aria-label="归还书架编号">
                             <option value="1">1号架</option>
                             <option value="2">2号架</option>
                             <option value="3">3号架</option>
@@ -326,34 +327,7 @@
         // 状态变量
         let loading = false;
         
-        // 页面加载时获取所有图书
-        document.addEventListener('DOMContentLoaded', function() {
-            showAllBooks();
-        });
-        
-        // 搜索图书
-        async function handleSearch() {
-            const searchText = document.getElementById('search-text').value;
-            if (!searchText.trim()) {
-                alert('请输入搜索内容');
-                return;
-            }
-            
-            try {
-                showLoading(true);
-                const response = await axios.get('<%= request.getContextPath() %>/api/admin/books', {
-                    params: { search: searchText }
-                });
-                renderBooks(response.data);
-            } catch (error) {
-                console.error('搜索图书失败:', error);
-                alert('搜索失败，请重试');
-            } finally {
-                showLoading(false);
-            }
-        }
-        
-        // 显示所有图书
+        // 显示所有图书 - 移到全局作用域以便onclick事件访问
         async function showAllBooks() {
             try {
                 showLoading(true);
@@ -366,6 +340,40 @@
                 showLoading(false);
             }
         }
+        
+        // 搜索图书
+        async function handleSearch() {
+            const searchText = document.getElementById('search-text').value;
+            if (!searchText.trim()) {
+                alert('请输入搜索内容');
+                return;
+            }
+            
+            try {
+                showLoading(true);
+                const response = await axios.get('<%= request.getContextPath() %>/api/admin/books', {
+                    params: { search: searchText.trim() }
+                });
+                renderBooks(response.data);
+            } catch (error) {
+                console.error('搜索图书失败:', error);
+                console.error('错误详情:', error.response);
+                alert('搜索失败，请重试: ' + (error.response?.data?.error || error.message));
+            } finally {
+                showLoading(false);
+            }
+        }
+        
+        // 页面加载时获取所有图书和绑定事件
+        document.addEventListener('DOMContentLoaded', function() {
+            showAllBooks();
+            
+            // 为搜索表单添加提交事件处理
+            document.getElementById('search-form').addEventListener('submit', function(e) {
+                e.preventDefault(); // 阻止表单默认提交行为
+                handleSearch();     // 调用搜索函数
+            });
+        });
         
         // 渲染图书列表
         function renderBooks(books) {
@@ -385,14 +393,24 @@
                 const row = document.createElement('tr');
                 row.className = 'border-b';
                 
-                // 获取状态类名
-                let statusClass = '';
-                if (book.status === '可借') {
-                    statusClass = 'book-status-available';
-                } else if (book.status === '借出') {
-                    statusClass = 'book-status-unavailable';
-                } else {
+                // 根据后端返回的数量统计动态计算图书状态
+                let status = '未知';
+                let statusClass = 'book-status-archived';
+                
+                // 检查是否有下架的副本
+                if (book.takedownCopies > 0 && book.takedownCopies === book.totalCopies) {
+                    status = '下架';
                     statusClass = 'book-status-archived';
+                } 
+                // 检查是否有可借的副本
+                else if (book.availableCopies > 0) {
+                    status = '可借';
+                    statusClass = 'book-status-available';
+                }
+                // 检查是否全部借出
+                else if (book.borrowedCopies > 0) {
+                    status = '借出';
+                    statusClass = 'book-status-unavailable';
                 }
                 
                 // 格式化出版日期
@@ -410,13 +428,14 @@
                     <td class="px-4 py-3">${book.totalCopies || 0}</td>
                     <td class="px-4 py-3">${book.availableCopies || 0}</td>
                     <td class="px-4 py-3">
-                        <span class="${statusClass}">${book.status || '未知'}</span>
+                        <span class="${statusClass}">${status}</span>
                     </td>
                     <td class="px-4 py-3">${location}</td>
                     <td class="px-4 py-3">
                         <div class="flex gap-2">
-                            ${book.status != '下架' && book.id ?
-                                '<button onclick="openLocationDialog(' + book.id + ', \'' + book.location + '\')" class="btn-outline text-xs">修改位置</button>' +
+                            ${status != '下架' ?
+                                // 使用ISBN代替id，因为前端操作都是基于ISBN的
+                                '<button onclick="openLocationDialog(\'' + book.isbn + '\', \'' + location + '\')" class="btn-outline text-xs">修改位置</button>' +
                                 '<button onclick="handleDelete(\'' + book.isbn + '\')" class="btn-danger text-xs">下架</button>'
                                 :
                                 '<span class="text-gray-500 text-xs">已下架</span>'
@@ -443,10 +462,9 @@
         }
         
         // 打开位置编辑弹窗
-        function openLocationDialog(bookId, location) {
-            // 注意：在实际应用中，这里应该传递ISBN而不是ID
-            // 但为了兼容现有代码，我们暂时使用bookId元素存储
-            document.getElementById('edit-book-id').value = bookId;
+        function openLocationDialog(isbn, location) {
+            // 直接使用ISBN存储，与后端操作保持一致
+            document.getElementById('edit-book-id').value = isbn;
             
             // 从位置字符串中提取信息 (格式: A栋1楼A区1号架)
             if (location && location !== '-') {
@@ -589,6 +607,63 @@
             const floor = document.getElementById('edit-floor').value;
             const zone = document.getElementById('edit-zone').value;
             // 保持现有选项
+        }
+    </script>
+    <script>
+        // 楼层更新函数
+        function updateFloors() {
+            const building = document.getElementById('building').value;
+            console.log('Building changed to:', building);
+            // 这里可以添加根据楼宇更新楼层的逻辑
+        }
+
+        // 区域更新函数
+        function updateZones() {
+            const floor = document.getElementById('floor').value;
+            console.log('Floor changed to:', floor);
+            // 这里可以添加根据楼层更新区域的逻辑
+        }
+
+        // 书架更新函数
+        function updateShelves() {
+            const zone = document.getElementById('zone').value;
+            console.log('Zone changed to:', zone);
+            // 这里可以添加根据区域更新书架的逻辑
+        }
+
+        // 处理添加图书副本
+        function handleAddCopies() {
+            const isbn = document.getElementById('isbn').value;
+            const quantity = document.getElementById('quantity').value;
+            const building = document.getElementById('building').value;
+            const floor = document.getElementById('floor').value;
+            const zone = document.getElementById('zone').value;
+            const shelf = document.getElementById('shelf').value;
+
+            // 构建请求数据
+            const bookData = {
+                isbn: isbn,
+                quantity: quantity,
+                location: {
+                    building: building,
+                    floor: floor,
+                    zone: zone,
+                    shelf: shelf
+                }
+            };
+
+            // 发送请求到后端
+            axios.post('/api/admin/books/add-copies', bookData)
+                .then(response => {
+                    alert('图书副本添加成功！');
+                    document.getElementById('add-copy-form').reset();
+                    // 刷新图书列表
+                    showAllBooks();
+                })
+                .catch(error => {
+                    console.error('Error adding book copies:', error);
+                    alert('添加失败，请检查ISBN是否正确或联系管理员。');
+                });
         }
     </script>
 </body>

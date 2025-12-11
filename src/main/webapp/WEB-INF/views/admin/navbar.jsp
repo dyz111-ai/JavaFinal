@@ -2,37 +2,39 @@
          pageEncoding="UTF-8"%>
 <style>
     .nav-link {
-        @apply px-4 py-2 text-gray-600 hover:text-blue-600 transition-colors duration-200;
+        padding: 8px 16px;
+        color: #4B5563;
+        text-decoration: none;
+    }
+    .nav-link:hover {
+        color: #2563EB;
     }
     .nav-link.active {
-        @apply text-blue-600 font-medium;
+        color: #2563EB;
+        font-weight: 500;
+    }
+    .logout-btn {
+        background-color: #EF4444;
+        color: white;
+        padding: 8px 16px;
+        border-radius: 6px;
+        text-decoration: none;
+        transition: background-color 0.2s;
+    }
+    .logout-btn:hover {
+        background-color: #DC2626;
+        color: white;
     }
 </style>
 
-<nav class="bg-white shadow-md">
-    <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
-        <div class="flex justify-between h-16">
-            <div class="flex">
-                <div class="flex-shrink-0 flex items-center">
-                    <a href="<%= request.getContextPath() %>/admin/dashboard" class="text-xl font-bold text-gray-800">
-                        图书馆管理系统 - 管理员控制台
-                    </a>
-                </div>
-                <div class="hidden sm:ml-6 sm:flex sm:space-x-8">
-                    <a href="<%= request.getContextPath() %>/admin/dashboard" class="nav-link">
-                        控制台
-                    </a>
-                    <a href="<%= request.getContextPath() %>/admin/books" class="nav-link">
-                        图书管理
-                    </a>
-                    <a href="<%= request.getContextPath() %>/admin/announcements" class="nav-link">
-                        公告管理
-                    </a>
-                </div>
+<nav style="background-color: white; box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.1);">
+    <div style="max-width: 80rem; margin: 0 auto; padding: 0 16px;">
+        <div style="display: flex; justify-content: space-between; height: 4rem; align-items: center;">
+            <div>
+                <span style="background-color: #3B82F6; color: white; font-weight: bold; padding: 8px 16px; border-radius: 6px;">管理员</span>
             </div>
-            <div class="flex items-center">
-                <span class="text-gray-500 mr-4">管理员</span>
-                <a href="<%= request.getContextPath() %>/auth/logout" class="bg-gray-100 px-4 py-2 rounded-md text-gray-700 hover:bg-gray-200 transition-colors">
+            <div>
+                <a href="<%= request.getContextPath() %>/auth/logout" class="logout-btn">
                     退出登录
                 </a>
             </div>
