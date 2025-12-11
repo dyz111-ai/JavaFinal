@@ -25,6 +25,10 @@ public class SeatReservationRepository {
             throw new RuntimeException("数据源查找失败: " + e.getMessage(), e);
         }
     }
+    // 测试环境构造器（直接注入DataSource）
+    public SeatReservationRepository(DataSource dataSource) {
+        this.dataSource = dataSource;
+    }
 
     public List<SeatStatus> findSeatLayout(int buildingId, int floor, String date, String timeSlot) {
         // 解析时间段：8-10, 10-12, 14-16, 16-18
