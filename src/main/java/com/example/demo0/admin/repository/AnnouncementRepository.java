@@ -2,148 +2,129 @@ package com.example.demo0.admin.repository;
 
 import com.example.demo0.admin.entity.Announcement;
 import com.example.demo0.admin.dto.UpsertAnnouncementDto;
-import jakarta.enterprise.context.ApplicationScoped;
-import jakarta.persistence.EntityManager;
-import jakarta.persistence.PersistenceContext;
-import jakarta.persistence.NoResultException;
+import javax.naming.InitialContext;
+import javax.sql.DataSource;
+import java.sql.*;
 import java.time.LocalDateTime;
+import java.util.ArrayList;
 import java.util.List;
-import org.jboss.logging.Logger;
 
-@ApplicationScoped
 public class AnnouncementRepository {
-    private static final Logger logger = Logger.getLogger(AnnouncementRepository.class.getName());
-    
-    // 常量定义
-    public static final String ANNOUNCEMENT_STATUS_ACTIVE = "发布中";
-    public static final String ANNOUNCEMENT_STATUS_INACTIVE = "已撤回";
 
-    @PersistenceContext
-    private EntityManager entityManager;
+    private final DataSource dataSource;
 
+    public AnnouncementRepository() {
+        try {
+            // 获取数据源
+            this.dataSource = (DataSource) new InitialContext().lookup("java:/jdbc/LibraryDS");
+        } catch (Exception e) {
+            throw new RuntimeException("JNDI 数据源查找失败", e);
+        }
+    }
+
+    // 获取所有公告
     public List<Announcement> getAllAnnouncements() {
-        try {
-            String jpql = "SELECT a FROM Announcement a ORDER BY a.createTime DESC";
-            return entityManager.createQuery(jpql, Announcement.class).getResultList();
-        } catch (Exception e) {
-            logger.error("获取所有公告失败", e);
-            return List.of();
+        List<Announcement> list = new ArrayList<>();
+        String sql = "SELECT * FROM public.announcement ORDER BY createtime DESC";
+        try (Connection conn = dataSource.getConnection();
+             PreparedStatement ps = conn.prepareStatement(sql);
+             ResultSet rs = ps.executeQuery()) {
+            while (rs.next()) {
+                list.add(mapRow(rs));
+            }
+        } catch (SQLException e) {
+            e.printStackTrace();
         }
+        return list;
     }
 
-    public List<Announcement> getPublicAnnouncements() {
-        try {
-            String jpql = "SELECT a FROM Announcement a WHERE a.status = :status ORDER BY a.createTime DESC";
-            return entityManager.createQuery(jpql, Announcement.class)
-                    .setParameter("status", ANNOUNCEMENT_STATUS_ACTIVE)
-                    .getResultList();
-        } catch (Exception e) {
-            logger.error("获取公开公告失败", e);
-            return List.of();
-        }
-    }
-
+    // 创建公告
     public Announcement createAnnouncement(UpsertAnnouncementDto dto, Integer librarianId) {
-        // 参数验证（使用更详细的错误信息）
-        if (dto == null) {
-            throw new IllegalArgumentException("公告数据不能为空");
-        }
-        if (dto.getTitle() == null || dto.getTitle().trim().isEmpty()) {
-            throw new IllegalArgumentException("公告标题不能为空");
-        }
-        if (librarianId == null) {
-            throw new IllegalArgumentException("管理员ID不能为空");
-        }
-        
-        try {
-            Announcement announcement = new Announcement();
-            announcement.setLibrarianId(librarianId);
-            announcement.setTitle(dto.getTitle());
-            announcement.setContent(dto.getContent());
-            announcement.setTargetGroup(dto.getTargetGroup());
-            announcement.setStatus(ANNOUNCEMENT_STATUS_ACTIVE);
-            announcement.setCreateTime(LocalDateTime.now());
+        String sql = "INSERT INTO public.announcement (librarianid, title, content, createtime, targetgroup, status) VALUES (?, ?, ?, ?, ?, ?)";
+        try (Connection conn = dataSource.getConnection();
+             PreparedStatement ps = conn.prepareStatement(sql, Statement.RETURN_GENERATED_KEYS)) {
 
-            entityManager.persist(announcement);
-            logger.infof("创建公告成功: id=%d, title=%s", announcement.getAnnouncementId(), announcement.getTitle());
-            return announcement;
-        } catch (Exception e) {
-            logger.error("创建公告失败", e);
-            throw new RuntimeException("创建公告失败: " + e.getMessage(), e);
+            ps.setInt(1, librarianId);
+            ps.setString(2, dto.getTitle());
+            ps.setString(3, dto.getContent());
+            ps.setTimestamp(4, Timestamp.valueOf(LocalDateTime.now()));
+            ps.setString(5, dto.getTargetGroup() != null ? dto.getTargetGroup() : "全员");
+            ps.setString(6, "发布中");
+
+            int affected = ps.executeUpdate();
+            if (affected > 0) {
+                try (ResultSet rs = ps.getGeneratedKeys()) {
+                    if (rs.next()) {
+                        return findById(rs.getInt(1));
+                    }
+                }
+            }
+        } catch (SQLException e) {
+            throw new RuntimeException("创建公告失败", e);
         }
+        return null;
     }
 
+    // 更新公告
     public Announcement updateAnnouncement(Integer id, UpsertAnnouncementDto dto) {
-        // 参数验证
-        if (id == null) {
-            throw new IllegalArgumentException("公告ID不能为空");
-        }
-        if (dto == null) {
-            throw new IllegalArgumentException("公告数据不能为空");
-        }
-        if (dto.getTitle() == null || dto.getTitle().trim().isEmpty()) {
-            throw new IllegalArgumentException("公告标题不能为空");
-        }
+        String sql = "UPDATE public.announcement SET title=?, content=?, targetgroup=? WHERE announcementid=?";
+        try (Connection conn = dataSource.getConnection();
+             PreparedStatement ps = conn.prepareStatement(sql)) {
 
-        try {
-            Announcement announcement = entityManager.find(Announcement.class, id);
-            if (announcement == null) {
-                logger.warn("公告不存在: " + id);
-                throw new NoResultException("公告不存在: " + id);
-            }
+            ps.setString(1, dto.getTitle());
+            ps.setString(2, dto.getContent());
+            ps.setString(3, dto.getTargetGroup());
+            ps.setInt(4, id);
 
-            announcement.setTitle(dto.getTitle());
-            announcement.setContent(dto.getContent());
-            announcement.setTargetGroup(dto.getTargetGroup());
-            entityManager.merge(announcement);
-            logger.infof("更新公告成功: id=%d, title=%s", id, dto.getTitle());
-            return announcement;
-        } catch (NoResultException e) {
-            throw e; // 直接抛出，不需要额外包装
-        } catch (Exception e) {
-            logger.error("更新公告失败: " + id, e);
-            throw new RuntimeException("更新公告失败: " + e.getMessage(), e);
+            ps.executeUpdate();
+            return findById(id);
+        } catch (SQLException e) {
+            throw new RuntimeException("更新公告失败", e);
         }
     }
 
+    // 更新状态（如下架）
     public boolean updateStatus(Integer id, String status) {
-        // 参数验证
-        if (id == null) {
-            throw new IllegalArgumentException("公告ID不能为空");
-        }
-        if (status == null) {
-            throw new IllegalArgumentException("公告状态不能为空");
-        }
-        // 验证状态值是否有效
-        if (!ANNOUNCEMENT_STATUS_ACTIVE.equals(status) && !ANNOUNCEMENT_STATUS_INACTIVE.equals(status)) {
-            throw new IllegalArgumentException("无效的公告状态: " + status);
-        }
-
-        try {
-            Announcement announcement = entityManager.find(Announcement.class, id);
-            if (announcement == null) {
-                logger.warn("公告不存在: " + id);
-                return false;
-            }
-
-            announcement.setStatus(status);
-            entityManager.merge(announcement);
-            logger.infof("更新公告状态成功: id=%d, status=%s", id, status);
-            return true;
-        } catch (IllegalArgumentException e) {
-            throw e;
-        } catch (Exception e) {
-            logger.error("更新公告状态失败: " + id, e);
+        String sql = "UPDATE public.announcement SET status=? WHERE announcementid=?";
+        try (Connection conn = dataSource.getConnection();
+             PreparedStatement ps = conn.prepareStatement(sql)) {
+            ps.setString(1, status);
+            ps.setInt(2, id);
+            return ps.executeUpdate() > 0;
+        } catch (SQLException e) {
+            e.printStackTrace();
             return false;
         }
     }
 
+    // 根据ID查找
     public Announcement findById(Integer id) {
-        try {
-            return entityManager.find(Announcement.class, id);
-        } catch (Exception e) {
-            logger.error("查找公告失败: " + id, e);
-            return null;
+        String sql = "SELECT * FROM public.announcement WHERE announcementid=?";
+        try (Connection conn = dataSource.getConnection();
+             PreparedStatement ps = conn.prepareStatement(sql)) {
+            ps.setInt(1, id);
+            try (ResultSet rs = ps.executeQuery()) {
+                if (rs.next()) {
+                    return mapRow(rs);
+                }
+            }
+        } catch (SQLException e) {
+            e.printStackTrace();
         }
+        return null;
+    }
+
+    // 辅助映射方法
+    private Announcement mapRow(ResultSet rs) throws SQLException {
+        Announcement a = new Announcement();
+        a.setAnnouncementId(rs.getInt("announcementid"));
+        a.setLibrarianId(rs.getInt("librarianid"));
+        a.setTitle(rs.getString("title"));
+        a.setContent(rs.getString("content"));
+        a.setTargetGroup(rs.getString("targetgroup"));
+        a.setStatus(rs.getString("status"));
+        Timestamp ts = rs.getTimestamp("createtime");
+        if (ts != null) a.setCreateTime(ts.toLocalDateTime());
+        return a;
     }
 }

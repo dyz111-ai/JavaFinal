@@ -1,239 +1,221 @@
 package com.example.demo0.admin.repository;
 
-import com.example.demo0.admin.entity.Book;
-import com.example.demo0.admin.entity.Bookinfo;
+import com.example.demo0.admin.dto.AddCopiesDto;
+import com.example.demo0.admin.dto.BookAdminDto;
 import com.example.demo0.admin.dto.CreateBookDto;
 import com.example.demo0.admin.dto.UpdateBookDto;
-import com.example.demo0.admin.dto.AddCopiesDto;
-import jakarta.enterprise.context.ApplicationScoped;
-import jakarta.persistence.EntityManager;
-import jakarta.persistence.PersistenceContext;
+
+import javax.naming.InitialContext;
+import javax.naming.NamingException;
+import javax.sql.DataSource;
+import java.sql.*;
+import java.util.ArrayList;
 import java.util.List;
-import org.jboss.logging.Logger;
 
-@ApplicationScoped
 public class BookAdminRepository {
-    private static final Logger logger = Logger.getLogger(BookAdminRepository.class.getName());
-    
-    // 常量定义
-    public static final String BOOK_STATUS_NORMAL = "正常";
-    public static final String BOOK_STATUS_TAKEDOWN = "下架";
 
-    @PersistenceContext
-    private EntityManager entityManager;
+    private final DataSource dataSource;
 
-    public List<Bookinfo> searchBooks(String searchTerm) {
+    public BookAdminRepository() {
         try {
-            String jpql = "SELECT b FROM Bookinfo b WHERE LOWER(b.title) LIKE :term OR " +
-                    "LOWER(b.author) LIKE :term OR b.isbn LIKE :term ORDER BY b.title";
-            return entityManager.createQuery(jpql, Bookinfo.class)
-                    .setParameter("term", "%" + (searchTerm != null ? searchTerm.toLowerCase() : "") + "%")
-                    .getResultList();
-        } catch (Exception e) {
-            logger.error("搜索图书失败: " + searchTerm, e);
-            return List.of();
+            this.dataSource = (DataSource) new InitialContext().lookup("java:/jdbc/LibraryDS");
+        } catch (NamingException e) {
+            throw new RuntimeException("JNDI 数据源查找失败", e);
+        }
+    }
+
+    // 搜索图书并统计副本状态
+    public List<BookAdminDto> searchBooks(String search) {
+        List<BookAdminDto> list = new ArrayList<>();
+        // 关联查询：BookInfo + 统计 Book 表中的各状态数量 + 获取一个位置样本
+        String sql = "SELECT i.isbn, i.title, i.author, " +
+                "COUNT(b.bookid) as total_physical, " +
+                "COUNT(CASE WHEN b.status = '正常' THEN 1 END) as available, " +
+                "COUNT(CASE WHEN b.status = '借出' THEN 1 END) as borrowed, " +
+                "COUNT(CASE WHEN b.status = '下架' THEN 1 END) as takedown, " +
+                "(SELECT location FROM public.book WHERE isbn = i.isbn LIMIT 1) as sample_location " +
+                "FROM public.bookinfo i " +
+                "LEFT JOIN public.book b ON i.isbn = b.isbn " +
+                "WHERE i.title ILIKE ? OR i.author ILIKE ? OR i.isbn ILIKE ? " +
+                "GROUP BY i.isbn, i.title, i.author " +
+                "ORDER BY i.title";
+
+        try (Connection conn = dataSource.getConnection();
+             PreparedStatement ps = conn.prepareStatement(sql)) {
+
+            String term = "%" + (search == null ? "" : search.trim()) + "%";
+            ps.setString(1, term);
+            ps.setString(2, term);
+            ps.setString(3, term);
+
+            try (ResultSet rs = ps.executeQuery()) {
+                while (rs.next()) {
+                    BookAdminDto dto = new BookAdminDto();
+                    dto.setIsbn(rs.getString("isbn"));
+                    dto.setTitle(rs.getString("title"));
+                    dto.setAuthor(rs.getString("author"));
+                    dto.setLocation(rs.getString("sample_location")); // 获取位置
+
+                    int total = rs.getInt("total_physical");
+                    dto.setTotalCopies(total);
+                    dto.setPhysicalCopies(total);
+                    dto.setAvailableCopies(rs.getInt("available"));
+                    dto.setBorrowedCopies(rs.getInt("borrowed"));
+                    dto.setTakedownCopies(rs.getInt("takedown"));
+
+                    list.add(dto);
+                }
+            }
+        } catch (SQLException e) {
+            e.printStackTrace();
+        }
+        return list;
+    }
+
+    // 创建图书 (事务：BookInfo + Multiple Books)
+    public void createBook(CreateBookDto dto) {
+        if (isIsbnExists(dto.getIsbn())) {
+            throw new RuntimeException("ISBN 已存在: " + dto.getIsbn());
+        }
+
+        try (Connection conn = dataSource.getConnection()) {
+            conn.setAutoCommit(false);
+            try {
+                // 1. 插入 BookInfo
+                String sqlInfo = "INSERT INTO public.bookinfo (isbn, title, author, stock) VALUES (?, ?, ?, ?)";
+                try (PreparedStatement ps = conn.prepareStatement(sqlInfo)) {
+                    ps.setString(1, dto.getIsbn());
+                    ps.setString(2, dto.getTitle());
+                    ps.setString(3, dto.getAuthor());
+                    ps.setInt(4, dto.getNumberOfCopies());
+                    ps.executeUpdate();
+                }
+
+                // 2. 插入 Book 副本
+                String sqlBook = "INSERT INTO public.book (isbn, barcode, status) VALUES (?, ?, ?)";
+                try (PreparedStatement ps = conn.prepareStatement(sqlBook)) {
+                    for (int i = 0; i < dto.getNumberOfCopies(); i++) {
+                        ps.setString(1, dto.getIsbn());
+                        ps.setString(2, dto.getIsbn() + "-" + (i + 1));
+                        ps.setString(3, "正常");
+                        ps.addBatch();
+                    }
+                    ps.executeBatch();
+                }
+
+                conn.commit();
+            } catch (SQLException e) {
+                conn.rollback();
+                throw new RuntimeException("创建图书失败: " + e.getMessage(), e);
+            }
+        } catch (SQLException e) {
+            throw new RuntimeException("数据库错误", e);
+        }
+    }
+
+    // 添加副本
+    public void addCopies(AddCopiesDto dto) {
+        try (Connection conn = dataSource.getConnection()) {
+            conn.setAutoCommit(false);
+            try {
+                // 1. 获取当前最大后缀
+                String maxSql = "SELECT COUNT(*) FROM public.book WHERE isbn = ?";
+                int currentCount = 0;
+                try (PreparedStatement ps = conn.prepareStatement(maxSql)) {
+                    ps.setString(1, dto.getIsbn());
+                    try (ResultSet rs = ps.executeQuery()) {
+                        if (rs.next()) currentCount = rs.getInt(1);
+                    }
+                }
+
+                // 2. 插入新副本
+                String insertSql = "INSERT INTO public.book (isbn, barcode, status, shelfid) VALUES (?, ?, ?, ?)";
+                try (PreparedStatement ps = conn.prepareStatement(insertSql)) {
+                    for (int i = 0; i < dto.getNumberOfCopies(); i++) {
+                        ps.setString(1, dto.getIsbn());
+                        ps.setString(2, dto.getIsbn() + "-" + (currentCount + i + 1));
+                        ps.setString(3, "正常");
+                        if (dto.getShelfId() != null) {
+                            ps.setInt(4, dto.getShelfId());
+                        } else {
+                            ps.setNull(4, Types.INTEGER);
+                        }
+                        ps.addBatch();
+                    }
+                    ps.executeBatch();
+                }
+
+                // 3. 更新 BookInfo 库存统计
+                String updateStock = "UPDATE public.bookinfo SET stock = stock + ? WHERE isbn = ?";
+                try(PreparedStatement ps = conn.prepareStatement(updateStock)) {
+                    ps.setInt(1, dto.getNumberOfCopies());
+                    ps.setString(2, dto.getIsbn());
+                    ps.executeUpdate();
+                }
+
+                conn.commit();
+            } catch (SQLException e) {
+                conn.rollback();
+                throw new RuntimeException("添加副本失败", e);
+            }
+        } catch (SQLException e) {
+            e.printStackTrace();
+        }
+    }
+
+    // 更新图书信息
+    public boolean updateBookInfo(String isbn, UpdateBookDto dto) {
+        String sql = "UPDATE public.bookinfo SET title=?, author=? WHERE isbn=?";
+        try (Connection conn = dataSource.getConnection();
+             PreparedStatement ps = conn.prepareStatement(sql)) {
+            ps.setString(1, dto.getTitle());
+            ps.setString(2, dto.getAuthor());
+            ps.setString(3, isbn);
+            return ps.executeUpdate() > 0;
+        } catch (SQLException e) {
+            e.printStackTrace();
+            return false;
+        }
+    }
+
+    // 更新位置
+    public boolean updateBookLocation(String isbn, String location) {
+        // 假设 Book 表有 location 字段（根据前端需求）
+        // 如果数据库没有 location 字段，这步会报错，请确保数据库结构匹配
+        String sql = "UPDATE public.book SET location=? WHERE isbn=? AND status='正常'";
+        try (Connection conn = dataSource.getConnection();
+             PreparedStatement ps = conn.prepareStatement(sql)) {
+            ps.setString(1, location);
+            ps.setString(2, isbn);
+            return ps.executeUpdate() > 0;
+        } catch (SQLException e) {
+            System.err.println("更新位置失败 (可能数据库缺少location字段): " + e.getMessage());
+            return false;
+        }
+    }
+
+    // 下架图书
+    public boolean takedownBook(String isbn) {
+        String sql = "UPDATE public.book SET status='下架' WHERE isbn=? AND status='正常'";
+        try (Connection conn = dataSource.getConnection();
+             PreparedStatement ps = conn.prepareStatement(sql)) {
+            ps.setString(1, isbn);
+            return ps.executeUpdate() > 0;
+        } catch (SQLException e) {
+            e.printStackTrace();
+            return false;
         }
     }
 
     public boolean isIsbnExists(String isbn) {
-        if (isbn == null || isbn.trim().isEmpty()) {
-            return false;
-        }
-        try {
-            String jpql = "SELECT COUNT(b) FROM Bookinfo b WHERE b.isbn = :isbn";
-            Long count = entityManager.createQuery(jpql, Long.class)
-                    .setParameter("isbn", isbn)
-                    .getSingleResult();
-            return count > 0;
-        } catch (Exception e) {
-            logger.error("检查ISBN是否存在失败: " + isbn, e);
-            return false;
-        }
-    }
-
-    public void createBook(CreateBookDto dto) { // 移除重复的@Transactional
-        // 参数验证（更详细的错误信息）
-        if (dto == null) {
-            throw new IllegalArgumentException("图书数据不能为空");
-        }
-        if (dto.getIsbn() == null || dto.getIsbn().trim().isEmpty()) {
-            throw new IllegalArgumentException("ISBN不能为空");
-        }
-        if (dto.getTitle() == null || dto.getTitle().trim().isEmpty()) {
-            throw new IllegalArgumentException("图书标题不能为空");
-        }
-        if (dto.getNumberOfCopies() <= 0) {
-            throw new IllegalArgumentException("图书数量必须大于0");
-        }
-        
-        // 检查ISBN是否已存在
-        if (isIsbnExists(dto.getIsbn())) {
-            throw new IllegalArgumentException("ISBN已存在: " + dto.getIsbn());
-        }
-
-        try {
-            // Step 1: Insert into Bookinfo
-            Bookinfo bookinfo = new Bookinfo();
-            bookinfo.setIsbn(dto.getIsbn());
-            bookinfo.setTitle(dto.getTitle());
-            bookinfo.setAuthor(dto.getAuthor());
-            bookinfo.setStock(dto.getNumberOfCopies());
-            entityManager.persist(bookinfo);
-
-            // Step 2: Insert multiple copies into Book
-            for (int i = 0; i < dto.getNumberOfCopies(); i++) {
-                Book book = new Book();
-                book.setIsbn(dto.getIsbn());
-                book.setStatus(BOOK_STATUS_NORMAL);
-                book.setBarcode(dto.getIsbn() + "-" + (i + 1));
-                entityManager.persist(book);
+        String sql = "SELECT 1 FROM public.bookinfo WHERE isbn = ?";
+        try (Connection conn = dataSource.getConnection();
+             PreparedStatement ps = conn.prepareStatement(sql)) {
+            ps.setString(1, isbn);
+            try (ResultSet rs = ps.executeQuery()) {
+                return rs.next();
             }
-            
-            logger.infof("创建图书成功: ISBN=%s, title=%s, 数量=%d", dto.getIsbn(), dto.getTitle(), dto.getNumberOfCopies());
-        } catch (IllegalArgumentException e) {
-            throw e;
-        } catch (Exception e) {
-            logger.error("创建图书失败", e);
-            throw new RuntimeException("创建图书失败: " + e.getMessage(), e);
-        }
-    }
-
-    public boolean updateBookInfo(String isbn, UpdateBookDto dto) {
-        if (isbn == null || dto == null) {
-            logger.warn("更新图书信息参数无效: isbn或dto为空");
-            return false;
-        }
-        
-        try {
-            Bookinfo bookinfo = entityManager.find(Bookinfo.class, isbn);
-            if (bookinfo != null) {
-                bookinfo.setTitle(dto.getTitle());
-                bookinfo.setAuthor(dto.getAuthor());
-                entityManager.merge(bookinfo);
-                logger.infof("更新图书信息成功: ISBN=%s", isbn);
-                return true;
-            }
-            logger.warn("未找到图书信息: ISBN=" + isbn);
-            return false;
-        } catch (Exception e) {
-            logger.error("更新图书信息失败: ISBN=" + isbn, e);
-            return false;
-        }
-    }
-
-    public boolean takedownBook(String isbn) { // 移除重复的@Transactional
-        if (isbn == null || isbn.trim().isEmpty()) {
-            logger.warn("下架图书参数无效: ISBN为空");
-            return false;
-        }
-        
-        try {
-            String jpql = "UPDATE Book b SET b.status = :takedownStatus WHERE b.isbn = :isbn AND b.status = :normalStatus";
-            int affectedRows = entityManager.createQuery(jpql)
-                    .setParameter("takedownStatus", BOOK_STATUS_TAKEDOWN)
-                    .setParameter("isbn", isbn)
-                    .setParameter("normalStatus", BOOK_STATUS_NORMAL)
-                    .executeUpdate();
-            
-            if (affectedRows > 0) {
-                logger.infof("下架图书成功: ISBN=%s, 影响行数=%d", isbn, affectedRows);
-            } else {
-                logger.warn("未找到可下架的图书: ISBN=" + isbn);
-            }
-            return affectedRows > 0;
-        } catch (Exception e) {
-            logger.error("下架图书失败: ISBN=" + isbn, e);
-            return false;
-        }
-    }
-
-    public void addCopies(AddCopiesDto dto) { // 移除重复的@Transactional
-        // 参数验证
-        if (dto == null) {
-            throw new IllegalArgumentException("图书副本数据不能为空");
-        }
-        if (dto.getIsbn() == null || dto.getIsbn().trim().isEmpty()) {
-            throw new IllegalArgumentException("ISBN不能为空");
-        }
-        if (dto.getNumberOfCopies() <= 0) {
-            throw new IllegalArgumentException("添加数量必须大于0");
-        }
-        if (dto.getShelfId() == null) {
-            throw new IllegalArgumentException("书架ID不能为空");
-        }
-
-        try {
-            // Step 1: 检查图书是否存在
-            Bookinfo bookinfo = entityManager.find(Bookinfo.class, dto.getIsbn());
-            if (bookinfo == null) {
-                logger.warn("添加副本失败：图书不存在: " + dto.getIsbn());
-                throw new IllegalArgumentException("图书不存在: " + dto.getIsbn());
-            }
-
-            int currentStock = bookinfo.getStock();
-
-            // Step 2: Insert multiple copies into Book
-            for (int i = 0; i < dto.getNumberOfCopies(); i++) {
-                Book book = new Book();
-                book.setIsbn(dto.getIsbn());
-                book.setStatus(BOOK_STATUS_NORMAL);
-                book.setShelfId(dto.getShelfId());
-                book.setBarcode(dto.getIsbn() + "-" + (currentStock + i + 1));
-                entityManager.persist(book);
-            }
-
-            // Step 3: Update Bookinfo stock
-            bookinfo.setStock(currentStock + dto.getNumberOfCopies());
-            entityManager.merge(bookinfo);
-            
-            logger.infof("添加图书副本成功: ISBN=%s, 添加数量=%d, 书架ID=%s", 
-                    dto.getIsbn(), dto.getNumberOfCopies(), dto.getShelfId());
-        } catch (IllegalArgumentException e) {
-            throw e;
-        } catch (Exception e) {
-            logger.error("添加图书副本失败", e);
-            throw new RuntimeException("添加图书副本失败: " + e.getMessage(), e);
-        }
-    }
-
-    public Bookinfo findBookInfoByIsbn(String isbn) {
-        try {
-            return entityManager.find(Bookinfo.class, isbn);
-        } catch (Exception e) {
-            logger.error("查找图书信息失败: ISBN=" + isbn, e);
-            return null;
-        }
-    }
-    
-    /**
-     * 更新图书位置信息
-     * @param isbn 图书ISBN
-     * @param location 新的位置信息
-     * @return 是否更新成功
-     */
-    public boolean updateBookLocation(String isbn, String location) {
-        if (isbn == null || location == null || location.trim().isEmpty()) {
-            logger.warn("更新图书位置参数无效: ISBN或location为空");
-            return false;
-        }
-        
-        try {
-            // 更新该ISBN下所有正常状态图书的位置
-            String jpql = "UPDATE Book b SET b.location = :location WHERE b.isbn = :isbn AND b.status = :normalStatus";
-            int affectedRows = entityManager.createQuery(jpql)
-                    .setParameter("location", location)
-                    .setParameter("isbn", isbn)
-                    .setParameter("normalStatus", BOOK_STATUS_NORMAL)
-                    .executeUpdate();
-            
-            if (affectedRows > 0) {
-                logger.infof("更新图书位置成功: ISBN=%s, 新位置=%s, 影响行数=%d", isbn, location, affectedRows);
-            } else {
-                logger.warn("未找到可更新位置的图书: ISBN=" + isbn);
-            }
-            return affectedRows > 0;
-        } catch (Exception e) {
-            logger.error("更新图书位置失败: ISBN=" + isbn, e);
+        } catch (SQLException e) {
             return false;
         }
     }

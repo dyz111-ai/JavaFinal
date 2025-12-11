@@ -95,15 +95,20 @@
         color: #6b7280;
         font-weight: 500;
     }
-    
+
     .modal-backdrop {
         background-color: rgba(0, 0, 0, 0.5);
         position: fixed;
         inset: 0;
-        display: flex;
+        /* display: flex;  <-- 删除或注释掉这一行 */
         align-items: center;
         justify-content: center;
         z-index: 50;
+    }
+
+    /* ✅ 新增：只有当元素没有 hidden 类时，才使用 flex 布局显示 */
+    .modal-backdrop:not(.hidden) {
+        display: flex;
     }
     
     .modal {
