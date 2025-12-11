@@ -2,19 +2,22 @@ package com.example.demo0.auth.web;
 
 import com.example.demo0.auth.model.Reader;
 import com.example.demo0.auth.service.AuthService;
+import com.example.demo0.admin.entity.Librarian;
+import com.example.demo0.admin.service.AdminAuthService;
+
 import jakarta.servlet.ServletException;
 import jakarta.servlet.annotation.WebServlet;
 import jakarta.servlet.http.HttpServlet;
 import jakarta.servlet.http.HttpServletRequest;
 import jakarta.servlet.http.HttpServletResponse;
-import jakarta.servlet.http.HttpSession;
 import java.io.IOException;
 import java.nio.charset.StandardCharsets;
 
 @WebServlet(urlPatterns = {"/auth/*"})
 public class AuthServlet extends HttpServlet {
 
-    private final AuthService authService = new AuthService();
+    private final AuthService readerAuthService = new AuthService();
+    private final AdminAuthService adminAuthService = new AdminAuthService();
 
     @Override
     protected void doGet(HttpServletRequest req, HttpServletResponse resp) throws ServletException, IOException {
@@ -44,16 +47,49 @@ public class AuthServlet extends HttpServlet {
 
         try {
             if ("/login".equals(path)) {
-                String u = req.getParameter("username");
-                String p = req.getParameter("password");
-                Reader reader = authService.login(u, p);
+                // 获取登录类型
+                String loginType = req.getParameter("loginType");
+                String password = req.getParameter("password");
 
-                if (reader != null) {
-                    req.getSession().setAttribute("currentUser", reader);
-                    resp.sendRedirect(req.getContextPath() + "/home");
+                if ("admin".equals(loginType)) {
+                    // --- 管理员登录 ---
+                    String staffNo = req.getParameter("staffNo");
+
+                    if (staffNo == null || staffNo.isBlank() || password == null || password.isBlank()) {
+                        throw new RuntimeException("工号和密码不能为空");
+                    }
+
+                    Librarian admin = adminAuthService.login(staffNo, password);
+
+                    if (admin != null) {
+                        req.getSession().setAttribute("currentUser", admin);
+                        req.getSession().setAttribute("currentAdmin", admin);
+                        req.getSession().setAttribute("userRole", "admin");
+
+                        // 【关键】管理员登录成功后跳转到这里
+                        // 确保您的项目中确实存在 /admin/dashboard 对应的 Servlet 或 JSP
+                        // 如果没有，请先跳转到 /home 测试
+                        resp.sendRedirect(req.getContextPath() + "/admin/dashboard");
+                    }
                 } else {
-                    throw new RuntimeException("用户名或密码错误");
+                    // --- 普通读者登录 ---
+                    String username = req.getParameter("username");
+
+                    if (username == null || username.isBlank() || password == null || password.isBlank()) {
+                        throw new RuntimeException("账号和密码不能为空");
+                    }
+
+                    Reader reader = readerAuthService.login(username, password);
+
+                    if (reader != null) {
+                        req.getSession().setAttribute("currentUser", reader);
+                        req.getSession().setAttribute("userRole", "reader");
+                        resp.sendRedirect(req.getContextPath() + "/home");
+                    } else {
+                        throw new RuntimeException("用户名或密码错误");
+                    }
                 }
+
             } else if ("/register".equals(path)) {
                 String u = req.getParameter("username");
                 String p = req.getParameter("password");
@@ -64,7 +100,7 @@ public class AuthServlet extends HttpServlet {
                     throw new RuntimeException("用户名和密码不能为空");
                 }
 
-                authService.register(u, p, f, n);
+                readerAuthService.register(u, p, f, n);
                 resp.sendRedirect(req.getContextPath() + "/auth/login?msg=registered");
             } else {
                 resp.sendError(404);

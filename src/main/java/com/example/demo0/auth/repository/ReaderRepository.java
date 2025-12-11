@@ -83,6 +83,35 @@ public class ReaderRepository {
         return false;
     }
 
+    // 根据ID查找用户
+    public Reader findById(Integer readerId) {
+        if (readerId == null) return null;
+        
+        String sql = "SELECT ReaderID, Username, Password, Fullname, Nickname, Avatar, CreditScore, AccountStatus, Permission FROM Reader WHERE ReaderID = ?";
+        try (Connection conn = dataSource.getConnection();
+             PreparedStatement ps = conn.prepareStatement(sql)) {
+            ps.setInt(1, readerId);
+            try (ResultSet rs = ps.executeQuery()) {
+                if (rs.next()) {
+                    Reader reader = new Reader();
+                    reader.setReaderId(rs.getInt("ReaderID"));
+                    reader.setUsername(rs.getString("Username"));
+                    reader.setPassword(rs.getString("Password"));
+                    reader.setFullname(rs.getString("Fullname"));
+                    reader.setNickname(rs.getString("Nickname"));
+                    reader.setAvatar(rs.getString("Avatar"));
+                    reader.setCreditScore(rs.getInt("CreditScore"));
+                    reader.setAccountStatus(rs.getString("AccountStatus"));
+                    reader.setPermission(rs.getString("Permission"));
+                    return reader;
+                }
+            }
+        } catch (SQLException e) {
+            System.err.println("查询读者信息失败: " + e.getMessage());
+        }
+        return null;
+    }
+
     // 更新用户资料：用户名、真实姓名、昵称、头像
     public void update(Reader reader) {
         String sql = "UPDATE Reader SET Username = ?, Fullname = ?, Nickname = ?, Avatar = ? WHERE ReaderID = ?";
