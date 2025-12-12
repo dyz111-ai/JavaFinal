@@ -58,19 +58,29 @@
                 <p class="card-description">新增、查询、修改和删除图书信息。</p>
             </a>
 
+            <a href="<%= request.getContextPath() %>/admin/category" class="dashboard-card border-l-4 border-green-500 hover:bg-green-50/60">
+                <h3 class="card-title">分类管理</h3>
+                <p class="card-description">管理图书的分类层级结构。</p>
+            </a>
+
+            <a href="<%= request.getContextPath() %>/admin/book-category" class="dashboard-card border-l-4 border-teal-500 hover:bg-teal-50/60">
+                <h3 class="card-title">图书分类绑定</h3>
+                <p class="card-description">为图书绑定叶子分类。</p>
+            </a>
+
             <a href="<%= request.getContextPath() %>/admin/announcements" class="dashboard-card border-l-4 border-rose-500 hover:bg-rose-50/60">
                 <h3 class="card-title">公告发布</h3>
                 <p class="card-description">发布图书馆最新通知与公告。</p>
             </a>
 
-            <a href="<%= request.getContextPath() %>/admin/purchase-analysis" class="dashboard-card border-l-4 border-indigo-500 hover:bg-indigo-50/60">
-                <h3 class="card-title">采购分析</h3>
-                <p class="card-description">基于借阅数据分析采购需求。</p>
-            </a>
-
             <a href="<%= request.getContextPath() %>/admin/report-handling" class="dashboard-card border-l-4 border-red-500 hover:bg-red-50/60">
                 <h3 class="card-title">举报处理</h3>
                 <p class="card-description">处理用户提交的各类举报信息。</p>
+            </a>
+
+            <a href="<%= request.getContextPath() %>/admin/purchase-analysis" class="dashboard-card border-l-4 border-indigo-500 hover:bg-indigo-50/60">
+                <h3 class="card-title">采购分析</h3>
+                <p class="card-description">基于借阅数据分析采购需求。</p>
             </a>
         </div>
     </div>

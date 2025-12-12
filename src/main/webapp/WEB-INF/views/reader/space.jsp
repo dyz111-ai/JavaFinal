@@ -104,6 +104,7 @@
 </div>
 
 <script>
+
     const ctx = '<%=request.getContextPath()%>';
     const loggedIn = document.body.getAttribute('data-logged-in') === 'true';
     const myId = parseInt(document.body.getAttribute('data-my-id') || '-1', 10);

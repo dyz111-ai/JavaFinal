@@ -13,7 +13,13 @@ public class AddCopiesDto {
     private Integer numberOfCopies;
 
     @NotNull
-    private Integer shelfId;
+    private Integer buildingId;
+
+    @NotNull
+    private Integer floor;
+
+    @NotBlank
+    private String zone;
 
     // Getters and Setters
     public String getIsbn() { return isbn; }
@@ -22,6 +28,12 @@ public class AddCopiesDto {
     public Integer getNumberOfCopies() { return numberOfCopies; }
     public void setNumberOfCopies(Integer numberOfCopies) { this.numberOfCopies = numberOfCopies; }
 
-    public Integer getShelfId() { return shelfId; }
-    public void setShelfId(Integer shelfId) { this.shelfId = shelfId; }
+    public Integer getBuildingId() { return buildingId; }
+    public void setBuildingId(Integer buildingId) { this.buildingId = buildingId; }
+
+    public Integer getFloor() { return floor; }
+    public void setFloor(Integer floor) { this.floor = floor; }
+
+    public String getZone() { return zone; }
+    public void setZone(String zone) { this.zone = zone; }
 }

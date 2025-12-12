@@ -25,11 +25,66 @@ public class AnnouncementService {
     }
 
     public AnnouncementDto createAnnouncement(UpsertAnnouncementDto dto, Integer librarianId) {
-        return convertToDto(announcementRepository.createAnnouncement(dto, librarianId));
+        System.out.println("[AnnouncementService] ========== 开始创建公告 ==========");
+        System.out.println("[AnnouncementService] 接收到的参数:");
+        System.out.println("  LibrarianID: " + librarianId);
+        System.out.println("  DTO: " + (dto != null ? "非空" : "null"));
+        if (dto != null) {
+            System.out.println("    Title: " + dto.getTitle());
+            System.out.println("    Content: " + (dto.getContent() != null ? "长度=" + dto.getContent().length() : "null"));
+            System.out.println("    TargetGroup: " + dto.getTargetGroup());
+        }
+        
+        System.out.println("[AnnouncementService] 调用 repository.createAnnouncement()...");
+        Announcement entity = announcementRepository.createAnnouncement(dto, librarianId);
+        
+        if (entity != null) {
+            System.out.println("[AnnouncementService] ✅ Repository返回实体:");
+            System.out.println("  AnnouncementID: " + entity.getAnnouncementId());
+            System.out.println("  Title: " + entity.getTitle());
+            System.out.println("  Status: " + entity.getStatus());
+            System.out.println("[AnnouncementService] 转换为DTO...");
+            AnnouncementDto result = convertToDto(entity);
+            System.out.println("[AnnouncementService] ✅ 转换完成");
+            System.out.println("[AnnouncementService] ========== 创建公告成功 ==========");
+            return result;
+        } else {
+            System.out.println("[AnnouncementService] ❌ Repository返回null");
+            System.out.println("[AnnouncementService] ========== 创建公告失败 ==========");
+            return null;
+        }
     }
 
     public AnnouncementDto updateAnnouncement(Integer id, UpsertAnnouncementDto dto) {
-        return convertToDto(announcementRepository.updateAnnouncement(id, dto));
+        System.out.println("[AnnouncementService] ========== 开始更新公告 ==========");
+        System.out.println("[AnnouncementService] AnnouncementID: " + id);
+        System.out.println("[AnnouncementService] 接收到的DTO:");
+        if (dto != null) {
+            System.out.println("  Title: " + dto.getTitle());
+            System.out.println("  Content: " + (dto.getContent() != null ? "长度=" + dto.getContent().length() : "null"));
+            System.out.println("  TargetGroup: " + dto.getTargetGroup());
+        } else {
+            System.out.println("  DTO: null");
+        }
+        
+        System.out.println("[AnnouncementService] 调用 repository.updateAnnouncement()...");
+        Announcement entity = announcementRepository.updateAnnouncement(id, dto);
+        
+        if (entity != null) {
+            System.out.println("[AnnouncementService] ✅ Repository返回实体:");
+            System.out.println("  AnnouncementID: " + entity.getAnnouncementId());
+            System.out.println("  Title: " + entity.getTitle());
+            System.out.println("  Status: " + entity.getStatus());
+            System.out.println("[AnnouncementService] 转换为DTO...");
+            AnnouncementDto result = convertToDto(entity);
+            System.out.println("[AnnouncementService] ✅ 转换完成");
+            System.out.println("[AnnouncementService] ========== 更新公告成功 ==========");
+            return result;
+        } else {
+            System.out.println("[AnnouncementService] ❌ Repository返回null");
+            System.out.println("[AnnouncementService] ========== 更新公告失败 ==========");
+            return null;
+        }
     }
 
     public boolean takedownAnnouncement(Integer id) {

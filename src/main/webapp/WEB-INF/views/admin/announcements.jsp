@@ -154,6 +154,7 @@
     </div>
     
     <script>
+
         let editingId = null;
         
         // 页面加载时获取所有公告

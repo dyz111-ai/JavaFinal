@@ -14,7 +14,13 @@ import java.util.List;
 
 @WebServlet(urlPatterns = {"/book/search"})
 public class BookSearchController extends HttpServlet {
-
+       // 静态初始化块，类加载时就会执行
+    static {
+        System.out.println("========================================");
+        System.out.println("[ReportServlet] 🔵 类被加载了！");
+        System.out.println("[ReportServlet] 类路径: com.example.demo0.admin.controller.ReportServlet");
+        System.out.println("========================================");
+    }
     private final BookSearchService service = new BookSearchService();
 
     @Override

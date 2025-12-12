@@ -153,7 +153,14 @@
     document.charset = 'UTF-8';
     
     // 从session获取当前管理员ID，如果不存在则使用默认值
-    var currentLibrarianId = <%= session.getAttribute("currentAdminId") != null ? session.getAttribute("currentAdminId") : 1 %>;
+    var currentLibrarianId = <% 
+        Object adminIdObj = session.getAttribute("currentAdminId");
+        if (adminIdObj != null) {
+            out.print(adminIdObj.toString());
+        } else {
+            out.print("1");
+        }
+    %>;
     
     // 页面加载时获取待处理举报
     window.onload = function() {
@@ -179,15 +186,28 @@
         xhr.responseType = 'json';
         
         xhr.onload = function() {
+            console.log('[前端] 收到响应，状态码:', xhr.status);
+            console.log('[前端] 响应类型:', xhr.responseType);
+            console.log('[前端] 原始响应:', xhr.response);
+            
             if (xhr.status === 200) {
                 try {
                     // XMLHttpRequest已经解析了JSON，直接使用response
                     var reports = xhr.response || [];
+                    console.log('[前端] 解析后的数据:', reports);
+                    console.log('[前端] 数据数量:', reports.length);
+                    console.log('[前端] 数据类型:', Array.isArray(reports) ? '数组' : typeof reports);
+                    
+                    if (reports.length > 0) {
+                        console.log('[前端] 第一条记录:', reports[0]);
+                    }
+                    
                     renderReportsList(reports);
                 } catch (e) {
-                    console.error('解析数据失败:', e);
-                    showMessage('错误：解析数据失败', 'error');
-                    reportsContainer.innerHTML = '<div class="text-center py-10 text-red-500">加载失败</div>';
+                    console.error('[前端] 解析数据失败:', e);
+                    console.error('[前端] 错误详情:', e.stack);
+                    showMessage('错误：解析数据失败: ' + e.message, 'error');
+                    reportsContainer.innerHTML = '<div class="text-center py-10 text-red-500">加载失败: ' + e.message + '</div>';
                 }
             } else if (xhr.status === 401) {
                 // 未授权，重定向到登录页
@@ -226,84 +246,153 @@
     
     // 创建举报卡片
     function createReportCard(report) {
+        console.log('[前端] 创建举报卡片，完整数据:', JSON.stringify(report, null, 2));
+        console.log('[前端] reportId:', report.reportId, typeof report.reportId);
+        console.log('[前端] reportReason:', report.reportReason, typeof report.reportReason);
+        console.log('[前端] bookTitle:', report.bookTitle, typeof report.bookTitle);
+        console.log('[前端] reviewContent:', report.reviewContent, typeof report.reviewContent);
+        console.log('[前端] commenterNickname:', report.commenterNickname, typeof report.commenterNickname);
+        console.log('[前端] commentTime:', report.commentTime, typeof report.commentTime);
+        console.log('[前端] commenterId:', report.commenterId, typeof report.commenterId);
+        console.log('[前端] reporterNickname:', report.reporterNickname, typeof report.reporterNickname);
+        
         var div = document.createElement('div');
         div.className = 'report-card';
-        div.dataset.reportId = report.reportId;
+        div.dataset.reportId = report.reportId || report.reportid || '';
         
-        // 格式化日期
-        var reportTimeStr = report.reportTime ? new Date(report.reportTime).toLocaleString('zh-CN') : '-';
-        var commentTimeStr = report.commentTime ? new Date(report.commentTime).toLocaleString('zh-CN') : '-';
+        // 格式化日期 - 处理可能的字段名变体
+        var reportTime = report.reportTime || report.reporttime || null;
+        var commentTime = report.commentTime || report.commenttime || null;
         
-        div.innerHTML = `
-            <div class="report-header">
-                <div>
-                    <div class="flex items-center gap-2 mb-1">
-                        <span class="font-medium">举报ID: ${report.reportId}</span>
-                        <span class="status-pending">待处理</span>
-                    </div>
-                    <div class="text-sm text-gray-500">
-                        举报时间: ${reportTimeStr}
-                    </div>
-                </div>
-                <div>
-                    <span class="text-sm font-medium">图书: ${report.bookTitle || '-'}</span>
-                </div>
-            </div>
-            
-            <div class="report-content">
-                <div class="mb-3">
-                    <div class="font-medium text-sm mb-1">举报原因:</div>
-                    <div>${report.reportReason || '-'}</div>
-                </div>
-                
-                <div class="mb-3">
-                    <div class="font-medium text-sm mb-1">被举报评论:</div>
-                    <div class="comment-preview">${report.reviewContent || '-'}</div>
-                    <div class="text-xs text-gray-500 mt-1">
-                        评论用户: ${report.commenterNickname || '-'} (ID: ${report.commenterId})
-                    </div>
-                    <div class="text-xs text-gray-500">
-                        评论时间: ${commentTimeStr}
-                    </div>
-                </div>
-                
-                <div class="text-sm">
-                    <div>举报人: ${report.reporterNickname || '-'} (ID: ${report.reporterId})</div>
-                </div>
-            </div>
-            
-            <div class="report-actions">
-                <button class="btn-success approve-btn">
-                    <i class="fa fa-check"></i> 批准举报
-                </button>
-                <button class="btn-danger reject-btn">
-                    <i class="fa fa-times"></i> 拒绝举报
-                </button>
-            </div>
-        `;
+        var reportTimeStr = '-';
+        if (reportTime) {
+            try {
+                reportTimeStr = new Date(reportTime).toLocaleString('zh-CN');
+            } catch (e) {
+                reportTimeStr = reportTime.toString();
+            }
+        }
+        
+        var commentTimeStr = '-';
+        if (commentTime) {
+            try {
+                commentTimeStr = new Date(commentTime).toLocaleString('zh-CN');
+            } catch (e) {
+                commentTimeStr = commentTime.toString();
+            }
+        }
+        
+        // 安全获取字段值，处理可能的字段名变体
+        var reportId = report.reportId || report.reportid || '-';
+        var bookTitle = report.bookTitle || report.booktitle || '-';
+        var reportReason = report.reportReason || report.reportreason || '-';
+        var reviewContent = report.reviewContent || report.reviewcontent || '-';
+        var commenterNickname = report.commenterNickname || report.commenternickname || '-';
+        var commenterId = report.commenterId || report.commenterid || '-';
+        var reporterNickname = report.reporterNickname || report.reporternickname || '-';
+        var reporterId = report.reporterId || report.reporterid || '-';
+        
+        div.innerHTML = 
+            '<div class="report-header">' +
+                '<div>' +
+                    '<div class="flex items-center gap-2 mb-1">' +
+                        '<span class="font-medium">举报ID: ' + escapeHtml(String(reportId)) + '</span>' +
+                        '<span class="status-pending">待处理</span>' +
+                    '</div>' +
+                    '<div class="text-sm text-gray-500">' +
+                        '举报时间: ' + escapeHtml(String(reportTimeStr)) +
+                    '</div>' +
+                '</div>' +
+                '<div>' +
+                    '<span class="text-sm font-medium">图书: ' + escapeHtml(String(bookTitle)) + '</span>' +
+                '</div>' +
+            '</div>' +
+            '<div class="report-content">' +
+                '<div class="mb-3">' +
+                    '<div class="font-medium text-sm mb-1">举报原因:</div>' +
+                    '<div>' + escapeHtml(String(reportReason)) + '</div>' +
+                '</div>' +
+                '<div class="mb-3">' +
+                    '<div class="font-medium text-sm mb-1">被举报评论:</div>' +
+                    '<div class="comment-preview">' + escapeHtml(String(reviewContent)) + '</div>' +
+                    '<div class="text-xs text-gray-500 mt-1">' +
+                        '评论用户: ' + escapeHtml(String(commenterNickname)) + ' (ID: ' + escapeHtml(String(commenterId)) + ')' +
+                    '</div>' +
+                    '<div class="text-xs text-gray-500">' +
+                        '评论时间: ' + escapeHtml(String(commentTimeStr)) +
+                    '</div>' +
+                '</div>' +
+                '<div class="text-sm">' +
+                    '<div>举报人: ' + escapeHtml(String(reporterNickname)) + ' (ID: ' + escapeHtml(String(reporterId)) + ')</div>' +
+                '</div>' +
+            '</div>' +
+            '<div class="report-actions">' +
+                '<div class="flex items-center gap-4">' +
+                    '<label class="flex items-center gap-2 text-sm" id="banUserLabel-' + reportId + '">' +
+                        '<input type="checkbox" id="banUserCheckbox-' + reportId + '">' +
+                        '<span>批准时同时禁言该用户</span>' +
+                    '</label>' +
+                    '<div class="flex gap-2">' +
+                        '<button class="btn-success approve-btn">' +
+                            '<i class="fa fa-check"></i> 批准举报' +
+                        '</button>' +
+                        '<button class="btn-danger reject-btn">' +
+                            '<i class="fa fa-times"></i> 拒绝举报' +
+                        '</button>' +
+                    '</div>' +
+                '</div>' +
+            '</div>';
         
         // 添加事件监听
-        div.querySelector('.approve-btn').onclick = function() {
-            handleReport(report.reportId, 'approve');
+        var approveBtn = div.querySelector('.approve-btn');
+        var rejectBtn = div.querySelector('.reject-btn');
+        var banUserCheckbox = div.querySelector('#banUserCheckbox-' + reportId);
+        
+        approveBtn.onclick = function() {
+            var banUser = banUserCheckbox ? banUserCheckbox.checked : false;
+            handleReport(report.reportId || report.reportid, 'approve', banUser);
         };
         
-        div.querySelector('.reject-btn').onclick = function() {
-            handleReport(report.reportId, 'reject');
+        rejectBtn.onclick = function() {
+            handleReport(report.reportId || report.reportid, 'reject', false);
         };
         
         return div;
     }
     
+    // HTML转义函数
+    function escapeHtml(text) {
+        if (text == null || text === undefined) return '';
+        var div = document.createElement('div');
+        div.textContent = String(text);
+        return div.innerHTML;
+    }
+    
     // 处理举报
-    function handleReport(reportId, action) {
+    function handleReport(reportId, action, banUser) {
         // 确认操作
-        var confirmMsg = action === 'approve' ? '确定要批准这个举报吗？' : '确定要拒绝这个举报吗？';
+        var confirmMsg = '';
+        if (action === 'approve') {
+            if (banUser) {
+                confirmMsg = '确定要批准这个举报并禁言该用户吗？';
+            } else {
+                confirmMsg = '确定要批准这个举报吗？（仅删除评论，不禁言用户）';
+            }
+        } else {
+            confirmMsg = '确定要拒绝这个举报吗？';
+        }
         if (!confirm(confirmMsg)) {
             return;
         }
         
         var contextPath = '<%= request.getContextPath() %>';
-        var reportCard = document.querySelector('.report-card[data-report-id="' + reportId + '"]');
+        // 查找举报卡片 - dataset.reportId 会生成 data-report-id 属性
+        var reportCard = document.querySelector('[data-report-id="' + reportId + '"]');
+        if (!reportCard) {
+            console.error('[前端] ❌ 找不到举报卡片，reportId:', reportId);
+            showMessage('错误：找不到对应的举报卡片', 'error');
+            return;
+        }
         var buttons = reportCard.querySelectorAll('button');
         
         // 禁用按钮并显示加载状态
@@ -316,15 +405,24 @@
         var dto = {
             reportId: reportId,
             action: action,
-            librarianId: currentLibrarianId
+            librarianId: currentLibrarianId,
+            banUser: banUser || false  // 根据用户选择设置
         };
+        
+        console.log('[前端] 发送处理举报请求:', JSON.stringify(dto));
+        console.log('[前端] 请求URL:', contextPath + '/api/admin/reports/' + reportId + '?librarianId=' + currentLibrarianId);
         
         var xhr = new XMLHttpRequest();
         xhr.open('PUT', contextPath + '/api/admin/reports/' + reportId + '?librarianId=' + currentLibrarianId, true);
         xhr.setRequestHeader('Content-Type', 'application/json; charset=UTF-8');
         
         xhr.onload = function() {
-            if (xhr.status === 204) {
+            console.log('[前端] 处理举报响应，状态码:', xhr.status);
+            console.log('[前端] 响应文本:', xhr.responseText);
+            
+            if (xhr.status === 204 || xhr.status === 200) {
+                // 204 No Content 或 200 OK 都视为成功
+                console.log('[前端] ✅ 举报处理成功');
                 showMessage('举报处理成功', 'success');
                 
                 // 添加淡出动画效果
@@ -344,12 +442,18 @@
                 }, 300);
             } else if (xhr.status === 401) {
                 // 未授权，重定向到登录页
+                console.log('[前端] ⚠️ 未授权，重定向到登录页');
                 window.location.href = contextPath + '/auth/login';
             } else {
+                console.error('[前端] ❌ 处理失败，状态码:', xhr.status);
+                console.error('[前端] 响应文本:', xhr.responseText);
                 try {
                     var errorData = JSON.parse(xhr.responseText);
-                    showMessage('处理失败: ' + (errorData.message || '未知错误'), 'error');
+                    var errorMsg = errorData.error || errorData.message || '未知错误';
+                    console.error('[前端] 错误信息:', errorMsg);
+                    showMessage('处理失败: ' + errorMsg, 'error');
                 } catch (e) {
+                    console.error('[前端] 解析错误响应失败:', e);
                     showMessage('处理失败: 服务器错误（状态码：' + xhr.status + '）', 'error');
                 }
                 
@@ -359,11 +463,14 @@
         };
         
         xhr.onerror = function() {
+            console.error('[前端] ❌ 网络错误');
             showMessage('网络错误，请检查网络连接', 'error');
             restoreButtons(reportCard, action);
         };
         
-        xhr.send(JSON.stringify(dto));
+        var requestBody = JSON.stringify(dto);
+        console.log('[前端] 请求体:', requestBody);
+        xhr.send(requestBody);
     }
     
     // 恢复按钮状态

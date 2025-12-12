@@ -20,7 +20,6 @@ import java.util.stream.Collectors;
 import org.jboss.logging.Logger;
 
 @ApplicationScoped
-@Transactional
 public class ReportService {
 
     private static final Logger LOGGER = Logger.getLogger(ReportService.class);
@@ -53,14 +52,36 @@ public class ReportService {
      */
     public List<ReportDetailDto> getPendingReports() {
         try {
+            System.out.println("[ReportService] ========== 开始获取待处理举报列表 ==========");
             LOGGER.info("获取待处理举报列表");
+            
+            System.out.println("[ReportService] 调用 reportRepository.getPendingReports()");
             List<Report> reports = reportRepository.getPendingReports();
+            System.out.println("[ReportService] Repository返回的Report实体数量: " + reports.size());
+            
+            if (!reports.isEmpty()) {
+                System.out.println("[ReportService] 前3条记录的状态值:");
+                for (int i = 0; i < Math.min(3, reports.size()); i++) {
+                    Report r = reports.get(i);
+                    System.out.println("  [" + i + "] ReportID: " + r.getReportId() + 
+                                     ", Status: [" + r.getStatus() + "]" +
+                                     ", CommentID: " + r.getCommentId());
+                }
+            }
 
-            return reports.stream()
+            System.out.println("[ReportService] 开始转换为ReportDetailDto");
+            List<ReportDetailDto> dtos = reports.stream()
                     .map(this::convertToReportDetailDto)
                     .filter(dto -> dto != null)
                     .collect(Collectors.toList());
+            
+            System.out.println("[ReportService] 转换完成，DTO数量: " + dtos.size());
+            System.out.println("[ReportService] ========== 获取待处理举报列表完成 ==========");
+            
+            return dtos;
         } catch (Exception e) {
+            System.out.println("[ReportService] ❌ 获取待处理举报列表失败: " + e.getMessage());
+            e.printStackTrace();
             LOGGER.error("获取待处理举报列表失败", e);
             throw new RuntimeException("获取待处理举报列表失败", e);
         }
@@ -72,8 +93,49 @@ public class ReportService {
     public List<ReportDetailDto> getAllReports() {
         try {
             LOGGER.info("获取所有举报列表");
-            String jpql = "SELECT r FROM Report r ORDER BY r.reportTime DESC";
-            List<Report> reports = entityManager.createQuery(jpql, Report.class).getResultList();
+            // 使用Repository的原生SQL查询
+            String sql = "SELECT reportid, commentid, readerid, reportreason, reporttime, status, librarianid " +
+                        "FROM public.report ORDER BY reporttime DESC";
+            
+            @SuppressWarnings("unchecked")
+            List<Object[]> results = entityManager.createNativeQuery(sql).getResultList();
+            
+            List<Report> reports = new java.util.ArrayList<>();
+            for (Object[] row : results) {
+                Report report = new Report();
+                report.setReportId(((Number) row[0]).intValue());
+                report.setCommentId(((Number) row[1]).intValue());
+                
+                Object readerIdObj = row[2];
+                if (readerIdObj instanceof String) {
+                    report.setReaderId(Integer.parseInt((String) readerIdObj));
+                } else {
+                    report.setReaderId(((Number) readerIdObj).intValue());
+                }
+                
+                report.setReportReason(row[3] != null ? row[3].toString() : null);
+                
+                if (row[4] != null) {
+                    if (row[4] instanceof java.sql.Timestamp) {
+                        report.setReportTime(((java.sql.Timestamp) row[4]).toLocalDateTime());
+                    } else if (row[4] instanceof LocalDateTime) {
+                        report.setReportTime((LocalDateTime) row[4]);
+                    }
+                }
+                
+                report.setStatus(row[5] != null ? row[5].toString() : null);
+                
+                if (row[6] != null) {
+                    Object libIdObj = row[6];
+                    if (libIdObj instanceof String) {
+                        report.setLibrarianId(Integer.parseInt((String) libIdObj));
+                    } else {
+                        report.setLibrarianId(((Number) libIdObj).intValue());
+                    }
+                }
+                
+                reports.add(report);
+            }
 
             return reports.stream()
                     .map(this::convertToReportDetailDto)
@@ -87,6 +149,7 @@ public class ReportService {
 
     /**
      * 将Report实体转换为ReportDetailDto
+     * 注意：查询操作不需要事务，如果某个关联实体不存在，会跳过该字段
      */
     private ReportDetailDto convertToReportDetailDto(Report report) {
         if (report == null) {
@@ -106,44 +169,60 @@ public class ReportService {
         // 设置处理人ID（如果有）
         dto.setLibrarianId(report.getLibrarianId());
 
-        // 获取评论详情
+        // 获取评论详情 - 使用Repository的原生SQL查询
         if (report.getCommentId() != null) {
-            try {
-                Comment_Table comment = entityManager.find(Comment_Table.class, report.getCommentId());
-                if (comment != null) {
-                    dto.setCommentId(comment.getCommentId());
-                    dto.setReviewContent(comment.getReviewContent());
-                    dto.setCommentTime(comment.getCreateTime());
-                    dto.setIsbn(comment.getIsbn());
-                    dto.setCommenterId(comment.getReaderId());
+            System.out.println("[ReportService] 开始查询评论，CommentID: " + report.getCommentId());
+            Comment_Table comment = reportRepository.findCommentById(report.getCommentId());
+            if (comment != null) {
+                System.out.println("[ReportService] ✅ 找到评论，ReviewContent: " + comment.getReviewContent() + ", ISBN: " + comment.getIsbn() + ", ReaderID: " + comment.getReaderId());
+                dto.setCommentId(comment.getCommentId());
+                dto.setReviewContent(comment.getReviewContent());
+                dto.setCommentTime(comment.getCreateTime());
+                dto.setIsbn(comment.getIsbn());
+                dto.setCommenterId(comment.getReaderId());
 
-                    // 获取评论者信息
-                    Reader commenter = entityManager.find(Reader.class, comment.getReaderId());
+                // 获取评论者信息 - 使用Repository的原生SQL查询
+                if (comment.getReaderId() != null) {
+                    System.out.println("[ReportService] 开始查询评论者，ReaderID: " + comment.getReaderId());
+                    Reader commenter = reportRepository.findReaderById(comment.getReaderId());
                     if (commenter != null) {
+                        System.out.println("[ReportService] ✅ 找到评论者，Nickname: " + commenter.getNickname());
                         dto.setCommenterNickname(commenter.getNickname());
                         dto.setCommenterAccountStatus(commenter.getAccountStatus());
+                    } else {
+                        System.out.println("[ReportService] ⚠️ 评论者不存在，ReaderID: " + comment.getReaderId());
                     }
-
-                    // 获取图书信息
-                    Bookinfo bookinfo = entityManager.find(Bookinfo.class, comment.getIsbn());
-                    if (bookinfo != null) {
-                        dto.setBookTitle(bookinfo.getTitle());
-                    }
+                } else {
+                    System.out.println("[ReportService] ⚠️ 评论的ReaderID为null");
                 }
-            } catch (Exception e) {
-                LOGGER.warn("获取评论详情失败，评论ID: " + report.getCommentId(), e);
+
+                // 获取图书信息 - 使用Repository的原生SQL查询
+                if (comment.getIsbn() != null) {
+                    System.out.println("[ReportService] 开始查询图书，ISBN: " + comment.getIsbn());
+                    Bookinfo bookinfo = reportRepository.findBookByIsbn(comment.getIsbn());
+                    if (bookinfo != null) {
+                        System.out.println("[ReportService] ✅ 找到图书，Title: " + bookinfo.getTitle());
+                        dto.setBookTitle(bookinfo.getTitle());
+                    } else {
+                        System.out.println("[ReportService] ⚠️ 图书不存在，ISBN: " + comment.getIsbn());
+                    }
+                } else {
+                    System.out.println("[ReportService] ⚠️ 评论的ISBN为null");
+                }
+            } else {
+                System.out.println("[ReportService] ⚠️ 评论不存在，CommentID: " + report.getCommentId());
             }
+        } else {
+            System.out.println("[ReportService] ⚠️ Report的CommentID为null");
         }
 
-        // 获取举报人信息
+        // 获取举报人信息 - 使用Repository的原生SQL查询
         if (report.getReaderId() != null) {
-            try {
-                Reader reporter = entityManager.find(Reader.class, report.getReaderId());
-                if (reporter != null) {
-                    dto.setReporterNickname(reporter.getNickname());
-                }
-            } catch (Exception e) {
-                LOGGER.warn("获取举报人信息失败，读者ID: " + report.getReaderId(), e);
+            Reader reporter = reportRepository.findReaderById(report.getReaderId());
+            if (reporter != null) {
+                dto.setReporterNickname(reporter.getNickname());
+            } else {
+                System.out.println("[ReportService] ⚠️ 举报人不存在，ReaderID: " + report.getReaderId());
             }
         }
 
@@ -176,28 +255,43 @@ public class ReportService {
                 throw new IllegalArgumentException("管理员ID不能为空");
             }
 
+            System.out.println("[ReportService] ========== 开始处理举报 ==========");
+            System.out.println("[ReportService] ReportID: " + reportId);
+            System.out.println("[ReportService] Action: " + action);
+            System.out.println("[ReportService] LibrarianID: " + librarianId);
             LOGGER.info("处理举报，举报ID: " + reportId + ", 动作: " + action + ", 管理员ID: " + librarianId);
 
             // 获取举报记录
             Report report = reportRepository.findReportById(reportId);
             if (report == null) {
+                System.out.println("[ReportService] ❌ 举报记录不存在，ID: " + reportId);
                 LOGGER.warn("举报记录不存在，ID: " + reportId);
                 throw new IllegalArgumentException("举报记录不存在");
             }
 
+            System.out.println("[ReportService] 找到举报记录:");
+            System.out.println("  ReportID: " + report.getReportId());
+            System.out.println("  Status: " + report.getStatus());
+            System.out.println("  CommentID: " + report.getCommentId());
+
             // 检查举报状态，只有待处理的举报可以处理
             if (!REPORT_STATUS_PENDING.equals(report.getStatus())) {
+                System.out.println("[ReportService] ❌ 举报状态不是待处理，当前状态: " + report.getStatus());
                 LOGGER.warn("举报状态不是待处理，无法处理，当前状态: " + report.getStatus());
                 throw new IllegalArgumentException("该举报已被处理");
             }
 
             // 根据action设置相应的状态
+            System.out.println("[ReportService] 根据action处理: " + action);
             switch (action.toLowerCase()) {
                 case ACTION_APPROVE:
+                    System.out.println("[ReportService] 执行批准操作");
                     return handleApproveAction(dto, report, librarianId);
                 case ACTION_REJECT:
+                    System.out.println("[ReportService] 执行驳回操作");
                     return handleRejectAction(dto, report, librarianId);
                 default:
+                    System.out.println("[ReportService] ❌ 无效的处理动作: " + action);
                     throw new IllegalArgumentException("无效的处理动作: " + action);
             }
         } catch (IllegalArgumentException e) {
@@ -222,9 +316,9 @@ public class ReportService {
             dto.setLibrarianId(librarianId);
             dto.setCommentId(report.getCommentId());
 
-            // 获取评论者ID
+            // 获取评论者ID - 使用Repository的原生SQL查询
             if (report.getCommentId() != null) {
-                Comment_Table comment = entityManager.find(Comment_Table.class, report.getCommentId());
+                Comment_Table comment = reportRepository.findCommentById(report.getCommentId());
                 if (comment != null) {
                     dto.setCommenterId(comment.getReaderId());
 
@@ -307,8 +401,8 @@ public class ReportService {
                 throw new IllegalArgumentException("举报原因不能为空");
             }
 
-            // 检查评论是否存在
-            Comment_Table comment = entityManager.find(Comment_Table.class, reportDto.getCommentId());
+            // 检查评论是否存在 - 使用Repository的原生SQL查询
+            Comment_Table comment = reportRepository.findCommentById(reportDto.getCommentId());
             if (comment == null) {
                 throw new IllegalArgumentException("评论不存在");
             }
@@ -318,8 +412,8 @@ public class ReportService {
                 throw new IllegalArgumentException("该评论状态不可举报");
             }
 
-            // 检查举报人是否存在
-            Reader reporter = entityManager.find(Reader.class, reportDto.getReaderId());
+            // 检查举报人是否存在 - 使用Repository的原生SQL查询
+            Reader reporter = reportRepository.findReaderById(reportDto.getReaderId());
             if (reporter == null) {
                 throw new IllegalArgumentException("举报人不存在");
             }
@@ -374,14 +468,8 @@ public class ReportService {
                 return false;
             }
 
-            // 检查是否已经举报过该评论
-            String jpql = "SELECT COUNT(r) FROM Report r WHERE r.readerId = :readerId AND r.commentId = :commentId";
-            Long count = entityManager.createQuery(jpql, Long.class)
-                    .setParameter("readerId", readerId)
-                    .setParameter("commentId", commentId)
-                    .getSingleResult();
-
-            return count == 0;
+            // 检查是否已经举报过该评论 - 使用Repository的原生SQL查询
+            return !reportRepository.hasReportedComment(readerId, commentId);
         } catch (Exception e) {
             LOGGER.error("检查举报权限失败", e);
             return false;

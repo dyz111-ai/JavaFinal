@@ -249,12 +249,58 @@
         for (var i = 0; i < logs.length; i++) {
             var log = logs[i];
             var tr = document.createElement('tr');
-            var formattedDate = log.logDate ? new Date(log.logDate).toLocaleString('zh-CN') : '-';
+            
+            // 调试信息
+            console.log('日志记录 ' + i + ':', log);
+            console.log('  logDate:', log.logDate, '类型:', typeof log.logDate);
+            console.log('  adminId:', log.adminId, '类型:', typeof log.adminId);
+            
+            // 格式化日期（只显示日期，不显示时分秒）
+            var formattedDate = '-';
+            if (log.logDate) {
+                try {
+                    // 如果已经是字符串格式 "yyyy-MM-dd HH:mm:ss"，直接提取日期部分
+                    var dateStr = log.logDate;
+                    if (typeof dateStr === 'string') {
+                        // 提取日期部分（yyyy-MM-dd）
+                        var dateMatch = dateStr.match(/^(\d{4}-\d{2}-\d{2})/);
+                        if (dateMatch) {
+                            formattedDate = dateMatch[1];
+                        } else {
+                            // 尝试解析为日期对象，然后只显示日期部分
+                            var date = new Date(dateStr);
+                            if (!isNaN(date.getTime())) {
+                                var year = date.getFullYear();
+                                var month = String(date.getMonth() + 1).padStart(2, '0');
+                                var day = String(date.getDate()).padStart(2, '0');
+                                formattedDate = year + '-' + month + '-' + day;
+                            } else {
+                                console.warn('无法解析日期:', log.logDate);
+                                formattedDate = log.logDate; // 直接显示原始值
+                            }
+                        }
+                    } else {
+                        // 如果是日期对象
+                        var date = new Date(dateStr);
+                        if (!isNaN(date.getTime())) {
+                            var year = date.getFullYear();
+                            var month = String(date.getMonth() + 1).padStart(2, '0');
+                            var day = String(date.getDate()).padStart(2, '0');
+                            formattedDate = year + '-' + month + '-' + day;
+                        } else {
+                            formattedDate = '-';
+                        }
+                    }
+                } catch (e) {
+                    console.error('日期解析错误:', e);
+                    formattedDate = log.logDate || '-';
+                }
+            }
             
             tr.innerHTML = '<td>' + (log.logId || '-') + '</td>' +
                           '<td>' + (log.logText || '-') + '</td>' +
                           '<td>' + formattedDate + '</td>' +
-                          '<td>' + (log.adminId || '-') + '</td>';
+                          '<td>' + (log.adminId !== null && log.adminId !== undefined ? log.adminId : '-') + '</td>';
             
             tbody.appendChild(tr);
         }

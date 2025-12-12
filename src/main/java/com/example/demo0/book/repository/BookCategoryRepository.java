@@ -148,9 +148,17 @@ public class BookCategoryRepository {
      * 获取图书的所有分类关联
      */
     public List<BookCategoryDetail> findByIsbn(String isbn) {
+        System.out.println("[BookCategoryRepository] ========== 开始查询图书分类 ==========");
+        System.out.println("[BookCategoryRepository] ISBN: " + isbn);
+        
         if (isbn == null || isbn.isBlank()) {
+            System.out.println("[BookCategoryRepository] ❌ ISBN为空，返回空列表");
             return new ArrayList<>();
         }
+
+        // 调试：查看 book_classify 表现有的部分记录，确认列名/数据
+        debugPrintSampleRows();
+        
         String sql = "SELECT " +
                      "    bc.isbn, " +
                      "    bi.title, " +
@@ -163,13 +171,19 @@ public class BookCategoryRepository {
                      "JOIN public.category c ON bc.categoryid = c.categoryid " +
                      "WHERE bc.isbn = ? " +
                      "ORDER BY c.categoryname";
+        
+        System.out.println("[BookCategoryRepository] SQL: " + sql);
+        System.out.println("[BookCategoryRepository] 参数: isbn=" + isbn.trim());
+        
         try (Connection conn = dataSource.getConnection();
              PreparedStatement ps = conn.prepareStatement(sql)) {
             
             ps.setString(1, isbn.trim());
             try (ResultSet rs = ps.executeQuery()) {
                 List<BookCategoryDetail> list = new ArrayList<>();
+                int count = 0;
                 while (rs.next()) {
+                    count++;
                     BookCategoryDetail detail = new BookCategoryDetail();
                     detail.setIsbn(nullSafe(rs.getString("isbn")));
                     detail.setTitle(nullSafe(rs.getString("title")));
@@ -178,16 +192,49 @@ public class BookCategoryRepository {
                     detail.setCategoryName(nullSafe(rs.getString("categoryname")));
                     detail.setRelationNote(nullSafe(rs.getString("relationnote")));
                     
+                    System.out.println("[BookCategoryRepository] 找到分类 " + count + ": " +
+                                     "categoryId=" + detail.getCategoryId() + 
+                                     ", categoryName=" + detail.getCategoryName());
+                    
                     // 获取分类路径
                     String categoryPath = String.join(" / ", categoryRepository.getCategoryPath(detail.getCategoryId()));
                     detail.setCategoryPath(categoryPath);
                     
+                    System.out.println("[BookCategoryRepository] 分类路径: " + categoryPath);
+                    
                     list.add(detail);
                 }
+                System.out.println("[BookCategoryRepository] ✅ 查询完成，共找到 " + count + " 条分类记录");
                 return list;
             }
         } catch (SQLException e) {
+            System.err.println("[BookCategoryRepository] ❌ SQL异常: " + e.getMessage());
+            System.err.println("[BookCategoryRepository] SQL状态: " + e.getSQLState());
+            e.printStackTrace();
             throw new RuntimeException("查询图书分类关联失败: " + e.getMessage(), e);
+        }
+    }
+
+    /**
+     * 调试：打印 book_classify 表的前几条记录，便于核对列名与数据
+     */
+    private void debugPrintSampleRows() {
+        String sampleSql = "SELECT isbn, categoryid FROM public.book_classify LIMIT 5";
+        try (Connection conn = dataSource.getConnection();
+             PreparedStatement ps = conn.prepareStatement(sampleSql);
+             ResultSet rs = ps.executeQuery()) {
+            int c = 0;
+            while (rs.next()) {
+                c++;
+                System.out.println("[BookCategoryRepository][DEBUG] sample " + c +
+                        " isbn=" + rs.getString("isbn") +
+                        ", categoryid=" + rs.getString("categoryid"));
+            }
+            if (c == 0) {
+                System.out.println("[BookCategoryRepository][DEBUG] book_classify 表暂无记录");
+            }
+        } catch (SQLException e) {
+            System.err.println("[BookCategoryRepository][DEBUG] 读取样例失败: " + e.getMessage());
         }
     }
 
