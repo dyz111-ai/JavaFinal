@@ -1,0 +1,714 @@
+openapi: 3.0.0
+info:
+  title: 图书馆管理系统 API 文档
+  description: |
+    包含读者端和管理端的所有 REST API 接口定义。
+    基于原生 Servlet 实现，大部分接口返回 JSON 格式数据。
+  version: 1.0.0
+servers:
+  - url: http://localhost:8080/demo0
+    description: 本地开发环境 (请根据实际 Context Path 修改)
+
+tags:
+  - name: Reader-Borrowing
+    description: 读者借阅相关接口
+  - name: Reader-BookList
+    description: 读者书单相关接口
+  - name: Reader-Space
+    description: 读者座位预约接口
+  - name: Reader-Comment
+    description: 读者评论与举报接口
+  - name: Reader-Category
+    description: 读者分类浏览接口
+  - name: Admin-Book
+    description: 管理员图书管理接口
+  - name: Admin-Announcement
+    description: 管理员公告管理接口
+  - name: Admin-Category
+    description: 管理员分类管理接口
+  - name: Admin-Report
+    description: 管理员举报处理接口
+  - name: Admin-Purchase
+    description: 管理员采购分析接口
+
+paths:
+  # ================= Reader: Borrowing =================
+  /api/borrowing/reader:
+    get:
+      tags: [Reader-Borrowing]
+      summary: 获取当前登录读者的借阅记录
+      responses:
+        '200':
+          description: 成功返回借阅记录列表
+        '401':
+          description: 未登录
+
+  /api/borrowing/unreturned-count/{readerId}:
+    get:
+      tags: [Reader-Borrowing]
+      summary: 获取指定读者的未归还图书数量
+      parameters:
+        - name: readerId
+          in: path
+          required: true
+          schema:
+            type: integer
+      responses:
+        '200':
+          description: 成功
+
+  /api/borrowing/overdue-unreturned-count/{readerId}:
+    get:
+      tags: [Reader-Borrowing]
+      summary: 获取指定读者的逾期未归还数量
+      parameters:
+        - name: readerId
+          in: path
+          required: true
+          schema:
+            type: integer
+      responses:
+        '200':
+          description: 成功
+
+  /api/borrowing/{id}:
+    get:
+      tags: [Reader-Borrowing]
+      summary: 获取单条借阅记录详情
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: integer
+      responses:
+        '200':
+          description: 成功
+        '404':
+          description: 记录不存在
+
+  /api/borrowing/borrow:
+    post:
+      tags: [Reader-Borrowing]
+      summary: 借阅图书
+      parameters:
+        - name: barcode
+          in: query
+          required: true
+          description: 图书条形码
+          schema:
+            type: string
+      responses:
+        '200':
+          description: 借阅成功
+        '400':
+          description: 参数错误或不可借阅
+
+  /api/borrowing/return:
+    post:
+      tags: [Reader-Borrowing]
+      summary: 归还图书
+      parameters:
+        - name: barcode
+          in: query
+          required: true
+          schema:
+            type: string
+      responses:
+        '200':
+          description: 归还成功
+
+  # ================= Reader: Category & BookCategory =================
+  /api/Category/tree:
+    get:
+      tags: [Reader-Category]
+      summary: 获取完整的分类树结构
+      responses:
+        '200':
+          description: 成功
+
+  /api/Category/{id}:
+    get:
+      tags: [Reader-Category]
+      summary: 获取单个分类信息
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: string
+      responses:
+        '200':
+          description: 成功
+
+  /api/BookCategory/leaf-categories:
+    get:
+      tags: [Reader-Category]
+      summary: 获取所有叶子节点分类
+      responses:
+        '200':
+          description: 成功
+
+  /api/BookCategory/book/{isbn}:
+    get:
+      tags: [Reader-Category]
+      summary: 获取某本图书所属的所有分类
+      parameters:
+        - name: isbn
+          in: path
+          required: true
+          schema:
+            type: string
+      responses:
+        '200':
+          description: 成功
+
+  /api/BookCategory/category/{categoryId}:
+    get:
+      tags: [Reader-Category]
+      summary: 获取某分类下的所有图书
+      parameters:
+        - name: categoryId
+          in: path
+          required: true
+          schema:
+            type: string
+      responses:
+        '200':
+          description: 成功
+
+  # ================= Reader: Comment =================
+  /comment/search:
+    get:
+      tags: [Reader-Comment]
+      summary: 搜索图书评论
+      parameters:
+        - name: ISBN
+          in: query
+          required: true
+          schema:
+            type: string
+        - name: limit
+          in: query
+          schema:
+            type: integer
+            default: 100
+      responses:
+        '200':
+          description: 评论列表
+
+  /comment/add:
+    post:
+      tags: [Reader-Comment]
+      summary: 添加评论
+      parameters:
+        - name: ISBN
+          in: query
+          required: true
+          schema:
+            type: string
+        - name: rating
+          in: query
+          schema:
+            type: integer
+            description: 评分 (1-5)
+        - name: reviewcontent
+          in: query
+          schema:
+            type: string
+        - name: redirect
+          in: query
+          description: 成功后的跳转地址，若不传则返回 JSON
+          schema:
+            type: string
+      responses:
+        '200':
+          description: JSON 结果
+        '302':
+          description: 重定向
+
+  /comment/report:
+    post:
+      tags: [Reader-Comment]
+      summary: 举报评论
+      parameters:
+        - name: commentId
+          in: query
+          required: true
+          schema:
+            type: integer
+        - name: reason
+          in: query
+          schema:
+            type: string
+      responses:
+        '200':
+          description: 提交成功
+
+  # ================= Reader: Space (From previous context) =================
+  /reader/space/seats:
+    get:
+      tags: [Reader-Space]
+      summary: 获取座位状态
+      parameters:
+        - name: buildingId
+          in: query
+          schema:
+            type: integer
+        - name: floor
+          in: query
+          schema:
+            type: integer
+        - name: date
+          in: query
+          schema:
+            type: string
+            format: date
+        - name: timeSlot
+          in: query
+          schema:
+            type: string
+      responses:
+        '200':
+          description: 座位列表
+
+  /reader/space/reservations/seat:
+    post:
+      tags: [Reader-Space]
+      summary: 预约座位
+      parameters:
+        - name: buildingId
+          in: query
+          schema:
+            type: integer
+        - name: floor
+          in: query
+          schema:
+            type: integer
+        - name: seatCode
+          in: query
+          schema:
+            type: string
+        - name: startTime
+          in: query
+          schema:
+            type: string
+            format: date-time
+        - name: endTime
+          in: query
+          schema:
+            type: string
+            format: date-time
+      responses:
+        '200':
+          description: 预约成功
+
+  # ================= Reader: BookList (From previous context) =================
+  /api/book/booklists/reader:
+    get:
+      tags: [Reader-BookList]
+      summary: 获取我的书单
+      responses:
+        '200':
+          description: 书单列表
+
+  /api/book/booklists:
+    post:
+      tags: [Reader-BookList]
+      summary: 创建书单
+      parameters:
+        - name: name
+          in: query
+          required: true
+          schema:
+            type: string
+        - name: introduction
+          in: query
+          schema:
+            type: string
+      responses:
+        '201':
+          description: 创建成功
+
+  # ================= Admin: Announcement =================
+  /api/admin/announcements/:
+    get:
+      tags: [Admin-Announcement]
+      summary: 获取所有公告列表
+      responses:
+        '200':
+          description: 成功
+    post:
+      tags: [Admin-Announcement]
+      summary: 创建公告
+      parameters:
+        - name: adminId
+          in: query
+          description: 发布管理员ID
+          schema:
+            type: integer
+      requestBody:
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                title:
+                  type: string
+                content:
+                  type: string
+                targetGroup:
+                  type: string
+                  enum: [ALL, STUDENT, TEACHER]
+      responses:
+        '201':
+          description: 创建成功
+
+  /api/admin/announcements/{id}:
+    get:
+      tags: [Admin-Announcement]
+      summary: 获取公告详情
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: integer
+      responses:
+        '200':
+          description: 成功
+    put:
+      tags: [Admin-Announcement]
+      summary: 更新公告内容
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: integer
+      requestBody:
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                title:
+                  type: string
+                content:
+                  type: string
+                targetGroup:
+                  type: string
+      responses:
+        '200':
+          description: 更新成功
+
+  /api/admin/announcements/{id}/takedown:
+    put:
+      tags: [Admin-Announcement]
+      summary: 下架公告
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: integer
+      responses:
+        '200':
+          description: 下架成功
+
+  # ================= Admin: Book Management =================
+  /api/admin/books/:
+    get:
+      tags: [Admin-Book]
+      summary: 搜索图书 (管理端)
+      parameters:
+        - name: search
+          in: query
+          description: 搜索关键字
+          schema:
+            type: string
+      responses:
+        '200':
+          description: 图书列表
+    post:
+      tags: [Admin-Book]
+      summary: 创建新书
+      requestBody:
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                isbn:
+                  type: string
+                title:
+                  type: string
+                author:
+                  type: string
+                publisher:
+                  type: string
+                publishYear:
+                  type: integer
+                price:
+                  type: number
+      responses:
+        '200':
+          description: 创建成功
+
+  /api/admin/books/copies:
+    post:
+      tags: [Admin-Book]
+      summary: 添加图书副本 (馆藏)
+      requestBody:
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                bookId:
+                  type: integer
+                numCopies:
+                  type: integer
+                buildingId:
+                  type: integer
+                floor:
+                  type: integer
+                zone:
+                  type: string
+      responses:
+        '200':
+          description: 添加成功
+
+  /api/admin/books/{id}/location:
+    put:
+      tags: [Admin-Book]
+      summary: 更新图书位置
+      parameters:
+        - name: id
+          in: path
+          description: BookID
+          required: true
+          schema:
+            type: integer
+      requestBody:
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                buildingId:
+                  type: integer
+                floor:
+                  type: integer
+                zone:
+                  type: string
+      responses:
+        '200':
+          description: 更新成功
+
+  /api/admin/books/{id}/takedown:
+    put:
+      tags: [Admin-Book]
+      summary: 下架图书
+      parameters:
+        - name: id
+          in: path
+          description: BookID
+          required: true
+          schema:
+            type: integer
+      responses:
+        '200':
+          description: 下架成功
+
+  # ================= Admin: Category Management =================
+  /api/admin/category/tree:
+    get:
+      tags: [Admin-Category]
+      summary: 获取管理端分类树
+      responses:
+        '200':
+          description: 成功
+
+  /api/admin/category/:
+    post:
+      tags: [Admin-Category]
+      summary: 添加分类
+      requestBody:
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                categoryId:
+                  type: string
+                categoryName:
+                  type: string
+                parentCategoryId:
+                  type: string
+      responses:
+        '200':
+          description: 成功
+
+  /api/admin/category/{id}:
+    get:
+      tags: [Admin-Category]
+      summary: 获取分类详情
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: string
+      responses:
+        '200':
+          description: 成功
+    put:
+      tags: [Admin-Category]
+      summary: 更新分类信息
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: string
+      requestBody:
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                categoryName:
+                  type: string
+                parentCategoryId:
+                  type: string
+      responses:
+        '200':
+          description: 更新成功
+    delete:
+      tags: [Admin-Category]
+      summary: 删除分类
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: string
+      responses:
+        '200':
+          description: 删除成功
+
+  # ================= Admin: Book-Category Binding =================
+  /api/admin/book-category/bind:
+    post:
+      tags: [Admin-Book]
+      summary: 绑定图书分类
+      requestBody:
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                isbn:
+                  type: string
+                categoryIds:
+                  type: array
+                  items:
+                    type: string
+      responses:
+        '200':
+          description: 绑定成功
+
+  # ================= Admin: Report =================
+  /api/admin/reports/pending:
+    get:
+      tags: [Admin-Report]
+      summary: 获取待处理举报列表
+      responses:
+        '200':
+          description: 成功
+
+  /api/admin/reports/add:
+    post:
+      tags: [Admin-Report]
+      summary: 添加举报
+      parameters:
+        - name: readerId
+          in: query
+          schema:
+            type: integer
+      requestBody:
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                commentId:
+                  type: integer
+                reason:
+                  type: string
+      responses:
+        '201':
+          description: 创建成功
+
+  /api/admin/reports/{id}:
+    put:
+      tags: [Admin-Report]
+      summary: 处理举报
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: integer
+        - name: librarianId
+          in: query
+          schema:
+            type: integer
+      requestBody:
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                action:
+                  type: string
+                  enum: [IGNORE, DELETE_COMMENT]
+                banUser:
+                  type: boolean
+      responses:
+        '204':
+          description: 处理成功
+
+  # ================= Admin: Purchase Analysis =================
+  /api/admin/purchase-analysis/:
+    get:
+      tags: [Admin-Purchase]
+      summary: 获取采购分析报表数据
+      responses:
+        '200':
+          description: 成功
+
+  /api/admin/purchase-analysis/logs:
+    get:
+      tags: [Admin-Purchase]
+      summary: 获取采购日志
+      responses:
+        '200':
+          description: 成功
+    post:
+      tags: [Admin-Purchase]
+      summary: 添加采购日志
+      requestBody:
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                logText:
+                  type: string
+                adminId:
+                  type: integer
+      responses:
+        '201':
+          description: 添加成功
