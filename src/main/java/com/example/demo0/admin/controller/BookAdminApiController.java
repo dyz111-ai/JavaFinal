@@ -43,14 +43,48 @@ public class BookAdminApiController extends HttpServlet {
         System.out.println("[BookAdminApiController] ========== 收到GET请求 ==========");
         resp.setContentType("application/json; charset=UTF-8");
         String search = req.getParameter("search");
-        System.out.println("[BookAdminApiController] 搜索参数: " + search);
+        
+        // 获取分页参数，默认值：page=1，pageSize=10
+        int page = 1;
+        int pageSize = 10;
+        
+        String pageParam = req.getParameter("page");
+        String pageSizeParam = req.getParameter("pageSize");
+        
+        try {
+            if (pageParam != null && !pageParam.isEmpty()) {
+                page = Integer.parseInt(pageParam);
+                if (page < 1) page = 1;
+            }
+            if (pageSizeParam != null && !pageSizeParam.isEmpty()) {
+                pageSize = Integer.parseInt(pageSizeParam);
+                if (pageSize < 1) pageSize = 1;
+                if (pageSize > 100) pageSize = 100; // 限制最大每页数量
+            }
+        } catch (NumberFormatException e) {
+            System.out.println("[BookAdminApiController] 分页参数格式错误，使用默认值: page=1, pageSize=10");
+        }
+        
+        System.out.println("[BookAdminApiController] 参数: search=" + search + ", page=" + page + ", pageSize=" + pageSize);
 
         try (PrintWriter out = resp.getWriter()) {
             System.out.println("[BookAdminApiController] 调用 service.getBooks()...");
-            List<BookAdminDto> books = service.getBooks(search);
+            List<BookAdminDto> books = service.getBooks(search, page, pageSize);
             System.out.println("[BookAdminApiController] ✅ 获取到 " + books.size() + " 条图书记录");
             
-            String json = gson.toJson(books);
+            // 获取总记录数用于分页
+            int total = service.getTotalBooksCount(search);
+            System.out.println("[BookAdminApiController] 总记录数: " + total);
+            
+            // 构造包含分页信息的响应
+            java.util.Map<String, Object> response = new java.util.HashMap<>();
+            response.put("books", books);
+            response.put("total", total);
+            response.put("page", page);
+            response.put("pageSize", pageSize);
+            response.put("pages", (int) Math.ceil((double) total / pageSize));
+            
+            String json = gson.toJson(response);
             System.out.println("[BookAdminApiController] 返回JSON长度: " + json.length());
             out.print(json);
         } catch (Exception e) {

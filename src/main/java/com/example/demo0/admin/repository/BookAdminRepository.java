@@ -30,7 +30,104 @@ public class BookAdminRepository {
         System.out.println("[BookAdminRepository] ========== Repository构造函数完成 ==========");
     }
 
-    // 搜索图书并统计副本状态
+    // 搜索图书并统计副本状态（带分页）
+    public List<BookAdminDto> searchBooks(String search, int page, int pageSize) {
+        System.out.println("[BookAdminRepository] ========== 开始搜索图书（带分页） ==========");
+        System.out.println("[BookAdminRepository] 搜索关键词: " + search);
+        System.out.println("[BookAdminRepository] 页码: " + page + ", 每页数量: " + pageSize);
+        
+        List<BookAdminDto> list = new ArrayList<>();
+        // 查询所有book记录，不聚合，每个book显示一行
+        // 关联查询：Book + BookInfo + Bookshelf 获取完整信息
+        String sql = "SELECT b.bookid, b.isbn, b.barcode, b.status, " +
+                "i.title, i.author, " +
+                "bs.shelfcode " +
+                "FROM public.book b " +
+                "JOIN public.bookinfo i ON b.isbn = i.isbn " +
+                "LEFT JOIN public.bookshelf bs ON b.shelfid = bs.shelfid " +
+                "WHERE (? IS NULL OR ? = '' OR i.title ILIKE ? OR i.author ILIKE ? OR i.isbn ILIKE ?) " +
+                "ORDER BY i.title, b.bookid " +
+                "LIMIT ? OFFSET ?";
+
+        System.out.println("[BookAdminRepository] SQL: " + sql);
+
+        try (Connection conn = dataSource.getConnection();
+             PreparedStatement ps = conn.prepareStatement(sql)) {
+
+            String term = "%" + (search == null ? "" : search.trim()) + "%";
+            ps.setString(1, search); // 原始search参数用于IS NULL检查
+            ps.setString(2, search); // 原始search参数用于空字符串检查
+            ps.setString(3, term);   // 模糊搜索书名
+            ps.setString(4, term);   // 模糊搜索作者
+            ps.setString(5, term);   // 模糊搜索ISBN
+            ps.setInt(6, pageSize);  // 每页数量
+            ps.setInt(7, (page - 1) * pageSize); // 偏移量
+
+            System.out.println("[BookAdminRepository] 执行查询，参数: search=" + search + ", term=" + term + ", page=" + page + ", pageSize=" + pageSize + ", offset=" + ((page - 1) * pageSize));
+
+            try (ResultSet rs = ps.executeQuery()) {
+                int count = 0;
+                while (rs.next()) {
+                    count++;
+                    BookAdminDto dto = new BookAdminDto();
+                    dto.setBookId(rs.getInt("bookid"));
+                    dto.setIsbn(rs.getString("isbn"));
+                    dto.setTitle(rs.getString("title"));
+                    dto.setAuthor(rs.getString("author"));
+                    dto.setBarcode(rs.getString("barcode"));
+                    dto.setStatus(rs.getString("status"));
+                    String shelfcode = rs.getString("shelfcode");
+                    dto.setLocation(shelfcode); // 使用 shelfcode 作为位置标识
+                    System.out.println("[BookAdminRepository] 图书位置: BookID=" + dto.getBookId() + ", ShelfCode=" + shelfcode);
+                    dto.setPublisher(null); // BookInfo 表没有 publisher 字段
+                    dto.setPublishDate(null); // BookInfo 表没有 publishdate 字段
+                    
+                    // 单本图书，数量相关字段设置为1或0
+                    dto.setTotalCopies(1);
+                    dto.setPhysicalCopies(1);
+                    if ("正常".equals(dto.getStatus())) {
+                        dto.setAvailableCopies(1);
+                        dto.setBorrowedCopies(0);
+                        dto.setTakedownCopies(0);
+                    } else if ("借出".equals(dto.getStatus())) {
+                        dto.setAvailableCopies(0);
+                        dto.setBorrowedCopies(1);
+                        dto.setTakedownCopies(0);
+                    } else if ("下架".equals(dto.getStatus())) {
+                        dto.setAvailableCopies(0);
+                        dto.setBorrowedCopies(0);
+                        dto.setTakedownCopies(1);
+                    } else {
+                        dto.setAvailableCopies(0);
+                        dto.setBorrowedCopies(0);
+                        dto.setTakedownCopies(0);
+                    }
+
+                    System.out.println("[BookAdminRepository] 找到图书: BookID=" + dto.getBookId() + 
+                                     ", ISBN=" + dto.getIsbn() + 
+                                     ", Title=" + dto.getTitle() + 
+                                     ", Barcode=" + dto.getBarcode() +
+                                     ", Status=" + dto.getStatus());
+                    
+                    list.add(dto);
+                }
+                System.out.println("[BookAdminRepository] 查询完成，共找到 " + count + " 条记录");
+            }
+        } catch (SQLException e) {
+            System.err.println("[BookAdminRepository] ❌ SQL异常: " + e.getMessage());
+            System.err.println("[BookAdminRepository] SQL状态: " + e.getSQLState());
+            e.printStackTrace();
+        } catch (Exception e) {
+            System.err.println("[BookAdminRepository] ❌ 其他异常: " + e.getMessage());
+            e.printStackTrace();
+        }
+        
+        System.out.println("[BookAdminRepository] 返回结果数量: " + list.size());
+        System.out.println("[BookAdminRepository] ========== 搜索图书（带分页）完成 ==========");
+        return list;
+    }
+
+    // 搜索图书并统计副本状态（不带分页）
     public List<BookAdminDto> searchBooks(String search) {
         System.out.println("[BookAdminRepository] ========== 开始搜索图书 ==========");
         System.out.println("[BookAdminRepository] 搜索关键词: " + search);
@@ -372,6 +469,53 @@ public class BookAdminRepository {
             e.printStackTrace();
             return false;
         }
+    }
+
+    // 获取符合搜索条件的图书总记录数
+    public int getTotalBooksCount(String search) {
+        System.out.println("[BookAdminRepository] ========== 获取图书总记录数 ==========");
+        System.out.println("[BookAdminRepository] 搜索关键词: " + search);
+        
+        int totalCount = 0;
+        // 构造与searchBooks相同的WHERE条件
+        String sql = "SELECT COUNT(*) " +
+                "FROM public.book b " +
+                "JOIN public.bookinfo i ON b.isbn = i.isbn " +
+                "LEFT JOIN public.bookshelf bs ON b.shelfid = bs.shelfid " +
+                "WHERE (? IS NULL OR ? = '' OR i.title ILIKE ? OR i.author ILIKE ? OR i.isbn ILIKE ?)";
+
+        System.out.println("[BookAdminRepository] SQL: " + sql);
+
+        try (Connection conn = dataSource.getConnection();
+             PreparedStatement ps = conn.prepareStatement(sql)) {
+
+            String term = "%" + (search == null ? "" : search.trim()) + "%";
+            ps.setString(1, search); // 原始search参数用于IS NULL检查
+            ps.setString(2, search); // 原始search参数用于空字符串检查
+            ps.setString(3, term);   // 模糊搜索书名
+            ps.setString(4, term);   // 模糊搜索作者
+            ps.setString(5, term);   // 模糊搜索ISBN
+
+            System.out.println("[BookAdminRepository] 执行查询，参数: search=" + search + ", term=" + term);
+
+            try (ResultSet rs = ps.executeQuery()) {
+                if (rs.next()) {
+                    totalCount = rs.getInt(1);
+                    System.out.println("[BookAdminRepository] 查询完成，总记录数: " + totalCount);
+                }
+            }
+        } catch (SQLException e) {
+            System.err.println("[BookAdminRepository] ❌ SQL异常: " + e.getMessage());
+            System.err.println("[BookAdminRepository] SQL状态: " + e.getSQLState());
+            e.printStackTrace();
+        } catch (Exception e) {
+            System.err.println("[BookAdminRepository] ❌ 其他异常: " + e.getMessage());
+            e.printStackTrace();
+        }
+        
+        System.out.println("[BookAdminRepository] 返回总记录数: " + totalCount);
+        System.out.println("[BookAdminRepository] ========== 获取图书总记录数完成 ==========");
+        return totalCount;
     }
 
     public boolean isIsbnExists(String isbn) {
