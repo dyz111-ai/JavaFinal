@@ -1,0 +1,70 @@
+name: Java CI/CD Pipeline
+
+# 触发条件：当推送到main分支或创建Pull Request到main分支时执行
+on:
+  push:
+    branches: [ main ]
+  pull_request:
+    branches: [ main ]
+
+# 定义工作流任务
+jobs:
+  # 构建和测试任务
+  build-and-test:
+    # 运行环境
+    runs-on: ubuntu-latest
+    
+    steps:
+    # 1. 检出代码
+    - uses: actions/checkout@v4
+    
+    # 2. 设置Java环境
+    - name: Set up JDK 21
+      uses: actions/setup-java@v4
+      with:
+        java-version: '21'
+        distribution: 'temurin'
+        cache: maven
+    
+    # 3. 安装依赖并构建项目
+    - name: Build with Maven
+      run: mvn -B package --file pom.xml
+    
+    # 4. 运行测试
+    - name: Run Tests
+      run: mvn test
+    
+    # 5. 上传构建产物（可选）
+    - name: Upload Artifact
+      uses: actions/upload-artifact@v4
+      with:
+        name: java-app
+        path: target/demo0-1.0-SNAPSHOT.war
+
+  # 部署任务（可选，根据需要启用）
+  deploy:
+    # 依赖于build-and-test任务成功完成
+    needs: build-and-test
+    # 只在推送到main分支时执行
+    if: github.event_name == 'push' && github.ref == 'refs/heads/main'
+    runs-on: ubuntu-latest
+    
+    steps:
+    # 1. 检出代码
+    - uses: actions/checkout@v4
+    
+    # 2. 下载构建产物
+    - name: Download Artifact
+      uses: actions/download-artifact@v4
+      with:
+        name: java-app
+    
+    # 3. 部署到服务器（示例：部署到远程服务器）
+    # 这里需要根据您的实际部署环境进行调整
+    - name: Deploy to Server
+      run: |
+        echo "Deploying to server..."
+        # 示例：使用SSH部署到远程服务器
+        # ssh user@your-server "mkdir -p /path/to/deploy"
+        # scp demo0-1.0-SNAPSHOT.war user@your-server:/path/to/deploy/
+        # ssh user@your-server "systemctl restart your-service"
