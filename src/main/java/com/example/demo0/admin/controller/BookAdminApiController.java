@@ -72,25 +72,17 @@ public class BookAdminApiController extends HttpServlet {
             List<BookAdminDto> books = service.getBooks(search, page, pageSize);
             System.out.println("[BookAdminApiController] ✅ 获取到 " + books.size() + " 条图书记录");
             
-            // 获取总记录数用于分页
-            int total = service.getTotalBooksCount(search);
-            System.out.println("[BookAdminApiController] 总记录数: " + total);
-            
-            // 构造包含分页信息的响应
-            java.util.Map<String, Object> response = new java.util.HashMap<>();
-            response.put("books", books);
-            response.put("total", total);
-            response.put("page", page);
-            response.put("pageSize", pageSize);
-            response.put("pages", (int) Math.ceil((double) total / pageSize));
-            
-            String json = gson.toJson(response);
+            // 直接返回数组，前端期望的是数组格式
+            String json = gson.toJson(books);
             System.out.println("[BookAdminApiController] 返回JSON长度: " + json.length());
+            System.out.println("[BookAdminApiController] 返回JSON前100字符: " + (json.length() > 100 ? json.substring(0, 100) : json));
             out.print(json);
         } catch (Exception e) {
             System.err.println("[BookAdminApiController] ❌ 异常: " + e.getMessage());
             e.printStackTrace();
-            resp.sendError(500, e.getMessage());
+            resp.setStatus(500);
+            resp.setContentType("application/json; charset=UTF-8");
+            resp.getWriter().print("{\"error\":\"" + e.getMessage() + "\"}");
         }
         System.out.println("[BookAdminApiController] ========== GET请求处理完成 ==========");
     }

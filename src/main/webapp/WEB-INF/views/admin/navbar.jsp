@@ -127,7 +127,6 @@
     <div class="nav-container">
         <div class="nav-left">
             <a href="<%= request.getContextPath() %>/admin/dashboard" class="nav-brand">
-      
                 <span>图书馆管理系统</span>
             </a>
             <ul class="nav-menu">
