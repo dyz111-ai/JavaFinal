@@ -457,7 +457,8 @@
         async function saveCategory() {
             const categoryId = document.getElementById('category-id').value.trim();
             const categoryName = document.getElementById('category-name').value.trim();
-            const parentCategoryId = document.getElementById('parent-category-select').value;
+            const parentCategoryIdEl = document.getElementById('parent-category-id');
+            const parentCategoryId = parentCategoryIdEl ? parentCategoryIdEl.value.trim() : '';
             
             if (!categoryId || !categoryName) {
                 alert('请填写完整信息');
@@ -550,29 +551,6 @@
         function closeDeleteModal() {
             document.getElementById('delete-modal').classList.add('hidden');
             deletingCategory = null;
-        }
-        
-        // 确认删除
-        async function confirmDelete() {
-            if (!deletingCategory) return;
-            
-            try {
-                const response = await axios.delete(
-                    '<%= request.getContextPath() %>/api/admin/category/' + deletingCategory.categoryId
-                );
-                
-                if (response.data.success) {
-                    alert('分类删除成功');
-                    closeDeleteModal();
-                    loadCategoryTree();
-                } else {
-                    alert('删除失败：' + (response.data.error || '未知错误'));
-                }
-            } catch (error) {
-                console.error('删除分类失败:', error);
-                const errorMsg = error.response?.data?.error || error.message || '删除失败';
-                alert('删除失败：' + errorMsg);
-            }
         }
     </script>
 </body>
