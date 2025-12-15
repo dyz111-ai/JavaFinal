@@ -137,6 +137,18 @@
             <version>5.3.1</version>
             <scope>test</scope>
         </dependency>
+        
+        <!-- Prometheus Monitoring Dependencies -->
+        <dependency>
+            <groupId>io.micrometer</groupId>
+            <artifactId>micrometer-core</artifactId>
+            <version>1.12.5</version>
+        </dependency>
+        <dependency>
+            <groupId>io.micrometer</groupId>
+            <artifactId>micrometer-registry-prometheus</artifactId>
+            <version>1.12.5</version>
+        </dependency>
     </dependencies>
 
     <build>
