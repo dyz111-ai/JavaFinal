@@ -1,0 +1,6 @@
+auth_modules:
+  default:
+    type: userpass
+    userpass:
+      username: postgres
+      password: fuaBbxZiovCAcxPPuhxbonkUeiOryZVM

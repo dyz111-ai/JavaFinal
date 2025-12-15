@@ -1,0 +1,17 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<Context>
+
+    <Resource
+            name="jdbc/LibraryDS"
+            auth="Container"
+            type="javax.sql.DataSource"
+            driverClassName="org.postgresql.Driver"
+            url="jdbc:postgresql://maglev.proxy.rlwy.net:48984/railway?sslmode=require"
+            username="postgres"
+            password="fuaBbxZiovCAcxPPuhxbonkUeiOryZVM"
+            maxTotal="20"
+            maxIdle="10"
+            maxWaitMillis="-1"
+    />
+
+</Context>
