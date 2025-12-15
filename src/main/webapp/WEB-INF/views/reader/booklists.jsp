@@ -586,7 +586,8 @@
                     html += '<div style="flex:1">';
                     html += '<h3 style="margin:0 0 5px;font-weight:bold">' + escapeHtml(item.BooklistName || '未命名') + '</h3>';
                     html += '<p style="margin:5px 0;color:#6b7280;font-size:14px">' + escapeHtml(item.BooklistIntroduction || '') + '</p>';
-                    html += '<p style="margin:5px 0;color:#9ca3af;font-size:12px">共同书籍: ' + (item.MatchingBooksCount || 0) + ' 本</p>';
+                    const matchCount = item.MatchingBooksCount || item.matchingBooksCount || item.matchingbookscount || 0;
+
                     html += '</div>';
                     html += '<button class="btn" onclick="collectBooklist(' + item.BooklistId + ')">收藏</button>';
                     html += '</div>';

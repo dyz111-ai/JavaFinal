@@ -157,6 +157,15 @@ public class BookListRepository {
         }
         booklist.setBooklistIntroduction(intro);
         booklist.setCreatorId(rs.getInt("creatorid"));
+        // 兼容推荐查询中的共同书籍数
+        try {
+            int matching = rs.getInt("matchingbookscount");
+            if (!rs.wasNull()) {
+                booklist.setMatchingBooksCount(matching);
+            }
+        } catch (SQLException ignored) {
+            // 列不存在时忽略
+        }
         return booklist;
     }
 

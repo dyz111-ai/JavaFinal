@@ -47,30 +47,18 @@ public class BookListService {
     }
 
     public boolean deleteBookList(Integer booklistId, Integer readerId) throws SQLException {
-        if (!repository.checkBooklistOwnership(booklistId, readerId)) {
-            return false;
-        }
         return repository.deleteBookList(booklistId) > 0;
     }
 
     public boolean addBookToBookList(Integer booklistId, String isbn, Integer readerId) throws SQLException {
-        if (!repository.checkBooklistOwnership(booklistId, readerId)) {
-            return false;
-        }
         return repository.addBookToBookList(booklistId, isbn) > 0;
     }
 
     public boolean removeBookFromBookList(Integer booklistId, String isbn, Integer readerId) throws SQLException {
-        if (!repository.checkBooklistOwnership(booklistId, readerId)) {
-            return false;
-        }
         return repository.removeBookFromBookList(booklistId, isbn) > 0;
     }
 
     public boolean updateBookListInfo(Integer booklistId, String name, String introduction, Integer readerId) throws SQLException {
-        if (!repository.checkBooklistOwnership(booklistId, readerId)) {
-            return false;
-        }
         return repository.updateBookListInfo(booklistId, name, introduction) > 0;
     }
 
@@ -106,9 +94,6 @@ public class BookListService {
      * 只更新书单名称
      */
     public boolean updateBooklistName(Integer booklistId, String name, Integer readerId) throws SQLException {
-        if (!repository.checkBooklistOwnership(booklistId, readerId)) {
-            return false;
-        }
         return repository.updateBooklistName(booklistId, name, readerId) > 0;
     }
 
@@ -116,9 +101,6 @@ public class BookListService {
      * 只更新书单简介
      */
     public boolean updateBooklistIntroduction(Integer booklistId, String introduction, Integer readerId) throws SQLException {
-        if (!repository.checkBooklistOwnership(booklistId, readerId)) {
-            return false;
-        }
         return repository.updateBooklistIntroduction(booklistId, introduction, readerId) > 0;
     }
 }

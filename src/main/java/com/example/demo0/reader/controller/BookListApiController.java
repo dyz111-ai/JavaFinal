@@ -171,8 +171,8 @@ public class BookListApiController extends HttpServlet {
                 if (success) {
                         out.print(gson.toJson(Map.of("Success", 1, "message", "添加成功")));
                 } else {
-                    resp.setStatus(HttpServletResponse.SC_FORBIDDEN);
-                        out.print(gson.toJson(Map.of("Success", 0, "message", "添加失败，可能无权限或书单不存在")));
+                    resp.setStatus(HttpServletResponse.SC_NOT_FOUND);
+                        out.print(gson.toJson(Map.of("Success", 0, "message", "添加失败，书单不存在")));
                     }
                 } catch (SQLException e) {
                     resp.setStatus(HttpServletResponse.SC_INTERNAL_SERVER_ERROR);
@@ -218,7 +218,13 @@ public class BookListApiController extends HttpServlet {
         if (pathInfo == null) pathInfo = "";
 
         try (PrintWriter out = resp.getWriter()) {
-            Integer readerId = 1; // Hardcoded for now
+            Reader currentUser = (Reader) req.getSession().getAttribute("currentUser");
+            if (currentUser == null || currentUser.getReaderId() == null) {
+                resp.setStatus(HttpServletResponse.SC_UNAUTHORIZED);
+                out.print(gson.toJson(Map.of("error", "未登录或登录状态已失效")));
+                return;
+            }
+            Integer readerId = currentUser.getReaderId();
 
             // PUT /api/book/booklists/{booklistId}
             if (pathInfo.matches("/\\d+")) {
@@ -230,8 +236,8 @@ public class BookListApiController extends HttpServlet {
                 if (success) {
                         out.print(gson.toJson(Map.of("Success", 1, "message", "更新成功")));
                     } else {
-                        resp.setStatus(HttpServletResponse.SC_FORBIDDEN);
-                        out.print(gson.toJson(Map.of("Success", 0, "message", "更新失败，可能无权限或书单不存在")));
+                        resp.setStatus(HttpServletResponse.SC_NOT_FOUND);
+                        out.print(gson.toJson(Map.of("Success", 0, "message", "更新失败，书单不存在")));
                     }
                 } catch (SQLException e) {
                     resp.setStatus(HttpServletResponse.SC_INTERNAL_SERVER_ERROR);
@@ -255,8 +261,8 @@ public class BookListApiController extends HttpServlet {
                     if (success) {
                         out.print(gson.toJson(Map.of("Success", 1, "message", "更新成功")));
                     } else {
-                        resp.setStatus(HttpServletResponse.SC_FORBIDDEN);
-                        out.print(gson.toJson(Map.of("Success", 0, "message", "更新失败，可能无权限或书单不存在")));
+                        resp.setStatus(HttpServletResponse.SC_NOT_FOUND);
+                        out.print(gson.toJson(Map.of("Success", 0, "message", "更新失败，书单不存在")));
                     }
                 } catch (SQLException e) {
                     resp.setStatus(HttpServletResponse.SC_INTERNAL_SERVER_ERROR);
@@ -275,8 +281,8 @@ public class BookListApiController extends HttpServlet {
                     if (success) {
                         out.print(gson.toJson(Map.of("Success", 1, "message", "更新成功")));
                 } else {
-                    resp.setStatus(HttpServletResponse.SC_FORBIDDEN);
-                        out.print(gson.toJson(Map.of("Success", 0, "message", "更新失败，可能无权限或书单不存在")));
+                    resp.setStatus(HttpServletResponse.SC_NOT_FOUND);
+                        out.print(gson.toJson(Map.of("Success", 0, "message", "更新失败，书单不存在")));
                     }
                 } catch (SQLException e) {
                     resp.setStatus(HttpServletResponse.SC_INTERNAL_SERVER_ERROR);
@@ -322,7 +328,13 @@ public class BookListApiController extends HttpServlet {
         if (pathInfo == null) pathInfo = "";
 
         try (PrintWriter out = resp.getWriter()) {
-            Integer readerId = 1; // Hardcoded for now
+            Reader currentUser = (Reader) req.getSession().getAttribute("currentUser");
+            if (currentUser == null || currentUser.getReaderId() == null) {
+                resp.setStatus(HttpServletResponse.SC_UNAUTHORIZED);
+                out.print(gson.toJson(Map.of("error", "未登录或登录状态已失效")));
+                return;
+            }
+            Integer readerId = currentUser.getReaderId();
 
             // DELETE /api/book/booklists/{booklistId}
             if (pathInfo.matches("/\\d+")) {
@@ -332,8 +344,8 @@ public class BookListApiController extends HttpServlet {
                 if (success) {
                     out.print(gson.toJson(Map.of("message", "删除成功")));
                 } else {
-                    resp.setStatus(HttpServletResponse.SC_FORBIDDEN);
-                    out.print(gson.toJson(Map.of("message", "删除失败，可能无权限或书单不存在")));
+                    resp.setStatus(HttpServletResponse.SC_NOT_FOUND);
+                    out.print(gson.toJson(Map.of("message", "删除失败，书单不存在")));
                     }
                 } catch (SQLException e) {
                     resp.setStatus(HttpServletResponse.SC_INTERNAL_SERVER_ERROR);

@@ -44,7 +44,7 @@
   <div class="card">
     <div class="title">发表你的评论</div>
     <form id="add" method="post" action="<%=ctx%>/comment/add">
-      <input type="hidden" name="ISBN" value="<%= isbn==null?"":isbn %>
+      <input type="hidden" name="ISBN" value="<%= isbn==null?"":isbn %>">
       <input type="hidden" name="redirect" value="<%= redirect %>">
       <label style="font-size:13px;color:#6b7280">评分（1-5）</label>
       <select name="Rating" required>

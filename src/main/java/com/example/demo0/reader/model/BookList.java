@@ -12,6 +12,8 @@ public class BookList {
     private Integer CreatorId;
     private java.sql.Timestamp FavoriteTime; // 用于收藏书单时的时间
     private String Notes; // 收藏备注
+    // 推荐结果中的共同书籍数量
+    private Integer MatchingBooksCount;
 
     /**
      * 无参构造函数，用于 Repository 映射
@@ -74,5 +76,13 @@ public class BookList {
 
     public void setNotes(String notes) {
         this.Notes = notes;
+    }
+
+    public Integer getMatchingBooksCount() {
+        return MatchingBooksCount;
+    }
+
+    public void setMatchingBooksCount(Integer matchingBooksCount) {
+        this.MatchingBooksCount = matchingBooksCount;
     }
 }

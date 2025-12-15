@@ -105,7 +105,7 @@
 
         <div class="actions">
             <a href="<%=request.getContextPath()%>/home" class="btn btn-outline">返回首页</a>
-            <a href="<%=request.getContextPath()%>/reader/booklists" class="btn btn-outline">个性化推荐</a>
+            <a href="<%=request.getContextPath()%>/reader/booklists" class="btn btn-outline">我的书单</a>
             <%-- 预留编辑功能 --%>
             <a href="<%=request.getContextPath()%>/reader/profile/edit" class="btn btn-primary">编辑资料</a>
         </div>

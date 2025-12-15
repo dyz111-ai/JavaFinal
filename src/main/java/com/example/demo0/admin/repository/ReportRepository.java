@@ -109,15 +109,15 @@ public class ReportRepository {
             logger.error("获取待处理举报失败", e);
             
             // 如果原生SQL失败，回退到JPQL
-            try {
-                String jpql = "SELECT r FROM Report r WHERE r.status = :status ORDER BY r.reportTime ASC";
+        try {
+            String jpql = "SELECT r FROM Report r WHERE r.status = :status ORDER BY r.reportTime ASC";
                 List<Report> jpqlResults = entityManager.createQuery(jpql, Report.class)
-                        .setParameter("status", REPORT_STATUS_PENDING)
-                        .getResultList();
+                    .setParameter("status", REPORT_STATUS_PENDING)
+                    .getResultList();
                 return jpqlResults;
             } catch (Exception e2) {
                 logger.error("JPQL查询也失败", e2);
-                return List.of();
+            return List.of();
             }
         }
     }
@@ -155,10 +155,10 @@ public class ReportRepository {
             System.out.println("[ReportRepository] 更新举报记录数: " + reportUpdated);
             
             if (reportUpdated == 0) {
-                logger.warn("未找到举报记录: " + dto.getReportId());
+            logger.warn("未找到举报记录: " + dto.getReportId());
                 System.out.println("[ReportRepository] ❌ 未找到举报记录: " + dto.getReportId());
-                return false;
-            }
+            return false;
+        }
 
             // 2. 更新评论状态 - 使用原生SQL
             if (dto.getNewCommentStatus() != null && dto.getCommentId() != null) {
